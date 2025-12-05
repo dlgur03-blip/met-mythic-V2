@@ -82,22 +82,7 @@ export function ReportViewer({ result, answers, onBack }: ReportViewerProps) {
     return re.test(email);
   };
 
-  // HTML 파일 다운로드 함수
-  const downloadHtmlFile = () => {
-    if (!htmlContent) return;
-    
-    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `MET_Mythic_Report_${result.primaryArchetype.archetypeName}_${new Date().toISOString().split('T')[0]}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  // 이메일 제출 + 다운로드
+  // 이메일 발송
   const sendEmail = async () => {
     if (!validateEmail(email)) {
       setEmailError('올바른 이메일 주소를 입력해주세요.');
@@ -108,7 +93,6 @@ export function ReportViewer({ result, answers, onBack }: ReportViewerProps) {
     setViewState('sending');
 
     try {
-      // 1. 서버에 기록 (Google Sheets + 관리자 알림)
       const response = await fetch('/api/send-report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -124,14 +108,12 @@ export function ReportViewer({ result, answers, onBack }: ReportViewerProps) {
       const data = await response.json();
 
       if (data.success) {
-        // 2. HTML 파일 자동 다운로드
-        downloadHtmlFile();
         setViewState('sent');
       } else {
-        throw new Error(data.error || '처리에 실패했습니다.');
+        throw new Error(data.error || '이메일 전송에 실패했습니다.');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : '처리 중 오류가 발생했습니다.');
+      setError(err instanceof Error ? err.message : '이메일 전송 중 오류가 발생했습니다.');
       setViewState('error');
     }
   };
@@ -340,13 +322,13 @@ export function ReportViewer({ result, answers, onBack }: ReportViewerProps) {
         {(viewState === 'ready' || viewState === 'sending') && (
           <div className="space-y-6">
             
-            {/* 이메일 입력 + 다운로드 섹션 */}
+            {/* 이메일 발송 섹션 */}
             <div className="bg-gradient-to-r from-purple-900/40 to-pink-900/40 border border-purple-500/30 rounded-2xl p-6">
               <div className="flex flex-col md:flex-row items-center gap-4">
                 <div className="flex-1 w-full">
-                  <div className="text-white font-bold mb-2">📥 보고서 다운로드</div>
+                  <div className="text-white font-bold mb-2">📧 이메일로 보고서 받기</div>
                   <p className="text-purple-300 text-sm mb-3">
-                    이메일을 입력하고 버튼을 누르면 HTML 보고서가 다운로드됩니다.
+                    이메일을 입력하시면 HTML 보고서가 첨부파일로 발송됩니다.
                   </p>
                   <div className="flex gap-2">
                     <input
@@ -364,7 +346,7 @@ export function ReportViewer({ result, answers, onBack }: ReportViewerProps) {
                                hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed
                                transition-all whitespace-nowrap"
                     >
-                      {viewState === 'sending' ? '처리 중...' : '📥 다운로드'}
+                      {viewState === 'sending' ? '전송 중...' : '📨 전송'}
                     </button>
                   </div>
                   {emailError && (
@@ -401,13 +383,13 @@ export function ReportViewer({ result, answers, onBack }: ReportViewerProps) {
           <div className="text-center py-16">
             <div className="text-8xl mb-6">✅</div>
             <h2 className="text-2xl font-bold text-white mb-4">
-              보고서가 다운로드되었습니다!
+              이메일이 발송되었습니다!
             </h2>
             <p className="text-purple-300 mb-2">
-              <strong className="text-purple-200">{email}</strong>로 요청 정보가 기록되었습니다.
+              <strong className="text-purple-200">{email}</strong>로 보고서가 발송되었습니다.
             </p>
             <p className="text-purple-400 text-sm mb-8">
-              다운로드된 HTML 파일을 브라우저에서 열어보세요.
+              스팸함도 확인해주세요.
             </p>
             
             <div className="flex justify-center gap-4">
@@ -415,7 +397,7 @@ export function ReportViewer({ result, answers, onBack }: ReportViewerProps) {
                 onClick={() => setViewState('ready')}
                 className="px-6 py-3 bg-white/10 text-purple-200 rounded-xl hover:bg-white/20 transition-all"
               >
-                📧 다른 이메일로 다시 받기
+                📧 다른 이메일로 전송
               </button>
               <button
                 onClick={onBack}

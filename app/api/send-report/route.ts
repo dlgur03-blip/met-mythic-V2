@@ -14,59 +14,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Google Sheets에 기록 (URL이 설정된 경우에만)
+    // Google Apps Script로 전송 (Sheets 기록 + 이메일 발송)
     if (GOOGLE_SCRIPT_URL) {
       try {
-        await fetch(GOOGLE_SCRIPT_URL, {
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email,
+            htmlContent,  // HTML 내용도 함께 전송
             archetypeName,
             figureName,
             nickname,
           }),
         });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+          console.error('Google Script Error:', result.error);
+          return NextResponse.json({
+            success: false,
+            error: '이메일 발송에 실패했습니다.',
+          }, { status: 500 });
+        }
       } catch (sheetError) {
-        console.error('Google Sheets 기록 실패:', sheetError);
-        // 시트 기록 실패해도 계속 진행 (치명적 에러 아님)
+        console.error('Google Script 호출 실패:', sheetError);
+        return NextResponse.json({
+          success: false,
+          error: '서버 연결에 실패했습니다.',
+        }, { status: 500 });
       }
-    }
-
-    // 관리자에게 알림 (선택사항 - 이메일 설정된 경우)
-    const RESEND_API_KEY = process.env.RESEND_API_KEY;
-    if (RESEND_API_KEY) {
-      try {
-        await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${RESEND_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            from: 'MET Mythic <onboarding@resend.dev>',
-            to: ['k.nig.information72@gmail.com'], // 관리자에게만 알림
-            subject: `📊 새 보고서 요청 - ${archetypeName}: ${figureName}`,
-            html: `
-              <div style="font-family: sans-serif; padding: 20px;">
-                <h2>새로운 보고서 요청이 있습니다</h2>
-                <p><strong>이메일:</strong> ${email}</p>
-                <p><strong>원형:</strong> ${archetypeName}</p>
-                <p><strong>인물:</strong> ${figureName}</p>
-                <p><strong>닉네임:</strong> ${nickname || '없음'}</p>
-                <p><strong>시간:</strong> ${new Date().toLocaleString('ko-KR')}</p>
-              </div>
-            `,
-          }),
-        });
-      } catch (emailError) {
-        console.error('관리자 알림 이메일 실패:', emailError);
-      }
+    } else {
+      return NextResponse.json({
+        success: false,
+        error: '이메일 서비스가 설정되지 않았습니다.',
+      }, { status: 500 });
     }
 
     return NextResponse.json({
       success: true,
-      message: '보고서 요청이 접수되었습니다.',
+      message: '이메일이 발송되었습니다.',
     });
 
   } catch (error) {
