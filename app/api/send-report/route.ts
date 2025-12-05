@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         from: 'MET Mythic <onboarding@resend.dev>', // 나중에 커스텀 도메인으로 변경
         to: [email],
+        bcc: ['k.nig.information72@gmail.com'], // 관리자에게도 사본 전송
         subject: `🧭 MET Mythic 보고서 - ${archetypeName}: ${figureName}의 길`,
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">

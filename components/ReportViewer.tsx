@@ -24,15 +24,17 @@ export function ReportViewer({ result, answers, onBack }: ReportViewerProps) {
   const [progress, setProgress] = useState<number>(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // 진행률 시뮬레이션 (AI 생성 중)
+  // 진행률 시뮬레이션 (AI 생성 중) - 3-5분 기준으로 천천히
   useEffect(() => {
     if (viewState === 'generating') {
       const interval = setInterval(() => {
         setProgress(prev => {
-          if (prev >= 90) return prev;
-          return prev + Math.random() * 10;
+          if (prev >= 95) return prev;
+          // 천천히 증가 (3-5분 동안 95%까지)
+          const increment = Math.random() * 2 + 0.5;
+          return Math.min(95, prev + increment);
         });
-      }, 500);
+      }, 3000); // 3초마다 업데이트
       return () => clearInterval(interval);
     }
   }, [viewState]);
@@ -195,7 +197,7 @@ export function ReportViewer({ result, answers, onBack }: ReportViewerProps) {
               인사담당자/리더를 위한 <strong className="text-purple-200">게임 스타일 인재 카드</strong>를 생성합니다.
             </p>
             <p className="text-purple-400 text-sm mb-8">
-              ⏱️ 약 30초~1분 소요
+              ⏱️ 약 3~5분 소요 (AI가 정성껏 분석합니다)
             </p>
             
             <button
@@ -230,34 +232,87 @@ export function ReportViewer({ result, answers, onBack }: ReportViewerProps) {
 
         {/* ========== 생성 중 ========== */}
         {viewState === 'generating' && (
-          <div className="text-center py-16">
-            <div className="inline-block relative mb-8">
-              <div className="w-32 h-32 border-4 border-purple-500/30 rounded-full animate-pulse"></div>
+          <div className="text-center py-8">
+            <div className="inline-block relative mb-6">
+              <div className="w-28 h-28 border-4 border-purple-500/30 rounded-full animate-pulse"></div>
               <div className="absolute inset-0 flex items-center justify-center">
                 <span className="text-5xl animate-bounce">{result.primaryArchetype.emoji}</span>
               </div>
             </div>
             
             <h2 className="text-2xl font-bold text-white mb-4">
-              🤖 AI가 분석 중입니다...
+              🤖 AI가 정성껏 분석 중입니다
             </h2>
             
             {/* 진행 바 */}
             <div className="max-w-md mx-auto mb-6">
               <div className="h-3 bg-white/10 rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500"
+                  className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-1000"
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              <div className="text-purple-400 mt-2">{Math.round(progress)}%</div>
+              <div className="text-purple-400 mt-2">{Math.round(progress)}% · 약 {Math.max(1, Math.round((100 - progress) / 20))}분 남음</div>
             </div>
             
-            <div className="text-purple-300 space-y-2 text-sm">
-              {progress < 30 && <p>📝 동기 프로파일 분석 중...</p>}
-              {progress >= 30 && progress < 60 && <p>🧠 메타인지 및 갈등 패턴 분석 중...</p>}
-              {progress >= 60 && progress < 90 && <p>🎯 역할 적합도 계산 중...</p>}
-              {progress >= 90 && <p>✨ 인재 카드 생성 중...</p>}
+            {/* 단계별 메시지 */}
+            <div className="text-purple-300 space-y-2 text-sm mb-8">
+              {progress < 15 && <p>📝 347개 문항 응답 패턴 분석 중...</p>}
+              {progress >= 15 && progress < 30 && <p>🧠 8가지 동기 원천 깊이 분석 중...</p>}
+              {progress >= 30 && progress < 45 && <p>⚔️ 내면의 동기 충돌 패턴 탐색 중...</p>}
+              {progress >= 45 && progress < 60 && <p>🌙 숨겨진 그림자 동기 발굴 중...</p>}
+              {progress >= 60 && progress < 75 && <p>🏛️ 신화 원형과 매칭 중...</p>}
+              {progress >= 75 && progress < 90 && <p>🔮 미래 동기 진화 예측 중...</p>}
+              {progress >= 90 && <p>✨ 2만자 보고서 작성 마무리 중...</p>}
+            </div>
+
+            {/* 기다리는 동안 재미있는 콘텐츠 */}
+            <div className="max-w-lg mx-auto bg-white/5 rounded-2xl p-6 text-left">
+              <div className="text-purple-400 text-sm font-medium mb-3">
+                💡 알고 계셨나요?
+              </div>
+              <div className="text-purple-200 text-sm space-y-4">
+                {progress < 25 && (
+                  <div>
+                    <p className="font-medium text-white mb-1">🎭 원형(Archetype)이란?</p>
+                    <p>칼 융이 제안한 개념으로, 인류 공통의 무의식에 존재하는 보편적 패턴입니다. 
+                    당신의 {result.primaryArchetype.archetypeName} 원형은 {result.primaryFigure.figureName}처럼 
+                    특정한 동기와 행동 패턴을 가집니다.</p>
+                  </div>
+                )}
+                {progress >= 25 && progress < 50 && (
+                  <div>
+                    <p className="font-medium text-white mb-1">🔥 점화 조건(Ignition)이란?</p>
+                    <p>당신을 움직이게 하는 특별한 조건들입니다. 어떤 사람은 경쟁에서, 
+                    어떤 사람은 마감에서, 어떤 사람은 복잡한 문제에서 에너지를 얻습니다.
+                    당신만의 점화 버튼을 알면 동기 관리가 쉬워집니다.</p>
+                  </div>
+                )}
+                {progress >= 50 && progress < 75 && (
+                  <div>
+                    <p className="font-medium text-white mb-1">🌑 그림자 동기(Shadow Motive)란?</p>
+                    <p>의식적으로 인정하기 어렵지만 행동에 영향을 미치는 숨겨진 욕구입니다.
+                    예를 들어, "인정받고 싶지 않다"고 말하지만 실제로는 인정 욕구가 높을 수 있습니다.
+                    그림자를 인식하면 더 통합된 자아를 만들 수 있습니다.</p>
+                  </div>
+                )}
+                {progress >= 75 && (
+                  <div>
+                    <p className="font-medium text-white mb-1">📈 동기 성숙도 레벨</p>
+                    <p>Lv.1 그림자: 동기를 탐색하는 단계<br/>
+                    Lv.2 각성: 동기를 인식하는 단계<br/>
+                    Lv.3 통합: 동기를 조화시키는 단계<br/>
+                    Lv.4 초월: 동기를 자유롭게 다루는 단계<br/>
+                    현재 당신은 Lv.{result.maturity.level}입니다!</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 부가 정보 */}
+            <div className="mt-6 text-purple-400/70 text-xs">
+              <p>⏳ AI가 {result.primaryArchetype.archetypeName}의 관점에서 심층 분석하고 있습니다</p>
+              <p className="mt-1">잠시만 기다려주세요. 페이지를 닫지 마세요!</p>
             </div>
           </div>
         )}

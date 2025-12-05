@@ -375,10 +375,19 @@ export function FullResultScreen({ result, onRetry, onGenerateReport }: FullResu
               <div className="bg-white/10 backdrop-blur rounded-2xl p-6">
                 <h3 className="text-lg font-semibold text-white mb-4">🔋 에너지 패턴</h3>
                 <div className="space-y-4">
-                  {energyScores.map((item: any) => (
+                  {energyScores.map((item: any) => {
+                    const energySourceNames: Record<string, string> = {
+                      challenge: '도전', complexity: '복잡성', autonomy: '자율성',
+                      mastery: '전문성', connection: '관계', recognition: '인정',
+                      creation: '창조', achievement: '성취', freedom: '자유',
+                      adventure: '모험', security: '안정', growth: '성장',
+                      learning: '학습', impact: '영향력', meaning: '의미',
+                    };
+                    const label = energySourceNames[item.source] || energySourceNames[item.type] || item.source || item.type;
+                    return (
                     <div key={item.source || item.type}>
                       <div className="flex justify-between mb-1">
-                        <span className="text-purple-200">{item.source || item.type}</span>
+                        <span className="text-purple-200">{label}</span>
                         <span className="text-white">{item.score}</span>
                       </div>
                       <div className="w-full bg-white/10 rounded-full h-2">
@@ -388,7 +397,8 @@ export function FullResultScreen({ result, onRetry, onGenerateReport }: FullResu
                         />
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -564,10 +574,26 @@ export function FullResultScreen({ result, onRetry, onGenerateReport }: FullResu
                   과거 결핍을 채우려는 욕구
                 </p>
                 <div className="space-y-3">
-                  {Object.entries(result.hiddenMotives.compensation).map(([comp, score]) => (
+                  {Object.entries(result.hiddenMotives.compensation).map(([comp, score]) => {
+                    const compensationNames: Record<string, string> = {
+                      achievement_compensation: '성취 보상',
+                      recognition_compensation: '인정 보상',
+                      connection_compensation: '관계 보상',
+                      security_compensation: '안정 보상',
+                      freedom_compensation: '자유 보상',
+                      mastery_compensation: '전문성 보상',
+                      creation_compensation: '창조 보상',
+                      adventure_compensation: '모험 보상',
+                      childhood_lack: '유년기 결핍',
+                      parental_pressure: '부모 압박',
+                      peer_rejection: '또래 거절',
+                      early_failure: '초기 실패',
+                      unmet_potential: '미발휘 잠재력',
+                    };
+                    return (
                     <div key={comp}>
                       <div className="flex justify-between mb-1">
-                        <span className="text-purple-200">{comp}</span>
+                        <span className="text-purple-200">{compensationNames[comp] || motiveNames[comp] || comp}</span>
                         <span className="text-white">{score}</span>
                       </div>
                       <div className="w-full bg-white/10 rounded-full h-2">
@@ -577,7 +603,8 @@ export function FullResultScreen({ result, onRetry, onGenerateReport }: FullResu
                         />
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -1048,7 +1075,14 @@ export function FullResultScreen({ result, onRetry, onGenerateReport }: FullResu
                 <h3 className="text-lg font-semibold text-white mb-4">🔮 동기 진화 예측</h3>
                 <div className="bg-purple-500/10 rounded-xl p-4 mb-4">
                   <div className="text-purple-300 text-sm mb-1">전체 방향성</div>
-                  <div className="text-white font-medium">{result.motiveEvolution.overallTrajectory}</div>
+                  <div className="text-white font-medium">{
+                    {
+                      expanding: '🚀 확장 중 - 새로운 동기가 성장하고 있습니다',
+                      consolidating: '🎯 집중 중 - 핵심 동기로 수렴하고 있습니다',
+                      shifting: '🔄 전환 중 - 동기 구조가 변화하고 있습니다',
+                      stable: '⚖️ 안정 - 현재 동기 구조가 유지되고 있습니다',
+                    }[result.motiveEvolution.overallTrajectory] || result.motiveEvolution.overallTrajectory
+                  }</div>
                 </div>
                 <div className="space-y-3">
                   {result.motiveEvolution.predictedChanges.slice(0, 4).map((change, i) => (
