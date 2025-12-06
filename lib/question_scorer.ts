@@ -2107,12 +2107,13 @@ export function calculateUniqueness(motiveScores: MotiveScore[], answers: Answer
   // 🔧 FIX: 빈 배열 보호
   if (motiveScores.length === 0) {
     return {
+      overall: 0,
+      percentile: 50,
       profileShape: 0,
       motiveCombination: 0,
-      responseVariance: 0,
-      uniquenessScore: 0,
+      responsePattern: 0,
       interpretation: '데이터 부족으로 분석할 수 없습니다.',
-      rarePatterns: []
+      uniqueTraits: []
     };
   }
   
