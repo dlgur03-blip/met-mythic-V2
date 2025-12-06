@@ -17,6 +17,8 @@ export function FullResultScreen({ result, onRetry, onGenerateReport }: FullResu
   const motiveNames: Record<string, string> = {
     achievement: '성취', mastery: '전문성', creation: '창조', recognition: '인정',
     connection: '관계', security: '안정', freedom: '자유', adventure: '모험',
+    // 🔧 FIX: hidden/compensation 관련 키 추가
+    general: '일반 보상', inherited: '대물림 욕구',
   };
 
   const ignitionNames: Record<string, string> = {
@@ -382,6 +384,37 @@ export function FullResultScreen({ result, onRetry, onGenerateReport }: FullResu
                 ))}
               </div>
             </div>
+
+            {/* 🆕 반대 인물 (가장 낮은 싱크로율) */}
+            {result.oppositeFigures && result.oppositeFigures.length > 0 && (
+              <div className="bg-white/10 backdrop-blur rounded-2xl p-6">
+                <h3 className="text-lg font-semibold text-white mb-2">
+                  🔮 가장 다른 신화 인물
+                </h3>
+                <p className="text-xs text-purple-300 mb-4">
+                  나와 가장 다른 성향의 인물들. 이들의 특성은 성장의 방향이 될 수 있습니다.
+                </p>
+                <div className="space-y-2">
+                  {result.oppositeFigures.slice(0, 3).map((fig, index) => (
+                    <div 
+                      key={fig.figure}
+                      className="flex items-center gap-3 p-3 rounded-xl bg-white/5"
+                    >
+                      <div className="w-8 h-8 bg-purple-900/50 rounded-full flex items-center justify-center text-sm">
+                        {48 - index}
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-white text-sm">{fig.figureName}</div>
+                        <div className="text-xs text-purple-400">{fig.origin} · {fig.archetypeName}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-purple-400 text-sm">{fig.similarity}%</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </>
         )}
 
@@ -613,6 +646,9 @@ export function FullResultScreen({ result, onRetry, onGenerateReport }: FullResu
                       peer_rejection: '또래 거절',
                       early_failure: '초기 실패',
                       unmet_potential: '미발휘 잠재력',
+                      // 🔧 FIX: 누락된 compensation 키 추가
+                      general: '과거 결핍 보상',
+                      inherited: '대물림 욕구',
                     };
                     return (
                     <div key={comp}>
@@ -638,10 +674,37 @@ export function FullResultScreen({ result, onRetry, onGenerateReport }: FullResu
               <div className="bg-white/10 backdrop-blur rounded-2xl p-6">
                 <h3 className="text-lg font-semibold text-white mb-2">⚔️ 동기 충돌</h3>
                 <p className="text-sm text-purple-300 mb-4">
-                  내면에서 충돌하는 동기 쌍
+                  내면에서 충돌하는 동기 쌍. 두 가지 욕구가 서로 경쟁하며 의사결정을 어렵게 만들 수 있습니다.
                 </p>
                 <div className="space-y-4">
-                  {result.conflicts.slice(0, 4).map((conflict, index) => (
+                  {result.conflicts.slice(0, 4).map((conflict, index) => {
+                    // 충돌 쌍별 해석
+                    const conflictDescriptions: Record<string, string> = {
+                      'achievement_connection': '성과를 추구하면서도 관계를 중시하는 내적 긴장',
+                      'achievement_security': '도전적 목표와 안정 사이의 갈등',
+                      'achievement_freedom': '성취 욕구와 자유로움 사이의 균형',
+                      'recognition_connection': '인정받고 싶은 욕구와 진정한 관계 사이의 갈등',
+                      'recognition_freedom': '타인의 시선과 자유로움 사이의 긴장',
+                      'freedom_security': '모험과 안정 사이의 근본적 갈등',
+                      'freedom_connection': '독립성과 관계 사이의 줄다리기',
+                      'mastery_adventure': '깊이 있는 전문성과 새로운 경험 사이의 선택',
+                      'creation_security': '창조적 도전과 안정 추구 사이의 갈등',
+                      'adventure_connection': '모험과 관계 유지 사이의 긴장',
+                    };
+                    const pairKey = `${conflict.pair[0]}_${conflict.pair[1]}`;
+                    const reversePairKey = `${conflict.pair[1]}_${conflict.pair[0]}`;
+                    const description = conflictDescriptions[pairKey] || conflictDescriptions[reversePairKey] || 
+                      `${motiveNames[conflict.pair[0]]}과(와) ${motiveNames[conflict.pair[1]]} 사이의 내적 긴장`;
+                    
+                    // 해결 상태 번역
+                    const resolutionNames: Record<string, string> = {
+                      balanced: '균형 상태',
+                      polarized: '극단화',
+                      suppressed: '억압됨',
+                      oscillating: '진동 중',
+                    };
+                    
+                    return (
                     <div key={index} className="bg-white/5 rounded-xl p-4">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-white font-medium">
@@ -655,6 +718,7 @@ export function FullResultScreen({ result, onRetry, onGenerateReport }: FullResu
                           {conflict.balanceRatio > 60 || conflict.balanceRatio < 40 ? '불균형' : '균형'}
                         </span>
                       </div>
+                      <p className="text-xs text-purple-300 mb-2">{description}</p>
                       <div className="flex h-3 rounded-full overflow-hidden bg-white/10">
                         <div 
                           className="bg-purple-500"
@@ -669,8 +733,14 @@ export function FullResultScreen({ result, onRetry, onGenerateReport }: FullResu
                         <span>{motiveNames[conflict.pair[0]]} {conflict.balanceRatio}%</span>
                         <span>{motiveNames[conflict.pair[1]]} {100 - conflict.balanceRatio}%</span>
                       </div>
+                      {conflict.resolution && (
+                        <div className="text-xs text-purple-400 mt-2">
+                          상태: {resolutionNames[conflict.resolution] || conflict.resolution} · 강도: {conflict.conflictIntensity}%
+                        </div>
+                      )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -729,7 +799,7 @@ export function FullResultScreen({ result, onRetry, onGenerateReport }: FullResu
               <div className="space-y-4">
                 <div>
                   <div className="flex justify-between mb-1">
-                    <span className="text-purple-200">자각 (Awareness)</span>
+                    <span className="text-purple-200">자각</span>
                     <span className="text-white">{result.maturity.awareness}점</span>
                   </div>
                   <div className="w-full bg-white/10 rounded-full h-2">
@@ -741,7 +811,7 @@ export function FullResultScreen({ result, onRetry, onGenerateReport }: FullResu
                 </div>
                 <div>
                   <div className="flex justify-between mb-1">
-                    <span className="text-purple-200">통합 (Integration)</span>
+                    <span className="text-purple-200">통합</span>
                     <span className="text-white">{result.maturity.integration}점</span>
                   </div>
                   <div className="w-full bg-white/10 rounded-full h-2">
@@ -753,7 +823,7 @@ export function FullResultScreen({ result, onRetry, onGenerateReport }: FullResu
                 </div>
                 <div>
                   <div className="flex justify-between mb-1">
-                    <span className="text-purple-200">성장 (Growth)</span>
+                    <span className="text-purple-200">성장</span>
                     <span className="text-white">{result.maturity.growth}점</span>
                   </div>
                   <div className="w-full bg-white/10 rounded-full h-2">
