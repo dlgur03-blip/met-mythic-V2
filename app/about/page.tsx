@@ -102,6 +102,40 @@ export default function AboutPage() {
           </h2>
           <p className="text-purple-200 text-center mb-12 text-lg">Our Philosophy</p>
 
+          {/* 🆕 집단무의식 설명 추가 */}
+          <div className="bg-gradient-to-r from-purple-900/50 via-pink-900/30 to-indigo-900/50 rounded-3xl p-8 mb-12 border border-purple-500/30">
+            <div className="text-center mb-6">
+              <span className="text-5xl">🌌</span>
+            </div>
+            <h3 className="text-2xl font-bold text-white text-center mb-4">
+              왜 신화 인물과 싱크로율이 높게 나올까요?
+            </h3>
+            <p className="text-white/80 text-center leading-relaxed mb-6">
+              칼 융(Carl Jung)은 인류가 공유하는 <strong className="text-purple-300">"집단무의식"</strong>이 
+              신화와 원형(Archetype)으로 표현된다고 말했습니다.
+            </p>
+            <div className="grid md:grid-cols-3 gap-4 text-center">
+              <div className="bg-white/5 rounded-xl p-4">
+                <div className="text-3xl mb-2">🧬</div>
+                <div className="text-white font-medium mb-1">보편적 패턴</div>
+                <p className="text-white/60 text-sm">모든 인간은 비슷한 동기 구조를 공유합니다</p>
+              </div>
+              <div className="bg-white/5 rounded-xl p-4">
+                <div className="text-3xl mb-2">📜</div>
+                <div className="text-white font-medium mb-1">수천 년의 지혜</div>
+                <p className="text-white/60 text-sm">신화는 인간 본성의 결정체입니다</p>
+              </div>
+              <div className="bg-white/5 rounded-xl p-4">
+                <div className="text-3xl mb-2">🔮</div>
+                <div className="text-white font-medium mb-1">당신 안의 신화</div>
+                <p className="text-white/60 text-sm">당신도 누군가의 신화를 살고 있습니다</p>
+              </div>
+            </div>
+            <p className="text-purple-300 text-center mt-6 text-sm">
+              💡 싱크로율 70% 이상은 해당 원형이 당신의 핵심 정체성과 깊이 연결되어 있다는 의미입니다.
+            </p>
+          </div>
+
           <div className="grid md:grid-cols-2 gap-8">
             <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-8 border border-white/10 hover:border-purple-500/50 transition-colors">
               <div className="text-4xl mb-4">🔍</div>
@@ -149,6 +183,268 @@ export default function AboutPage() {
                 세상에서 가장 정교한 동기 분석을 경험하세요.
               </p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 🆕 이론적 기반 섹션 */}
+      <section className="py-20 px-4">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-4">
+            📖 이론적 기반
+          </h2>
+          <p className="text-purple-200 text-center mb-6 text-lg">
+            MET Mythic은 검증된 심리학 이론들을 통합하여 설계되었습니다
+          </p>
+          <p className="text-white/50 text-center mb-12 text-sm max-w-2xl mx-auto">
+            단순한 재미용 테스트가 아닙니다. 각 분석 축은 학술적 연구에 기반하며,<br />
+            여러 이론을 교차 검증하여 더 정확한 결과를 도출합니다.
+          </p>
+
+          <div className="space-y-6">
+            {/* 1. 동기 원천 */}
+            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 hover:border-purple-500/30 transition-colors">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <span className="text-2xl">💫</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white mb-2">8가지 동기 원천</h3>
+                  <p className="text-white/70 mb-3">
+                    성취, 전문성, 창조, 인정, 관계, 안정, 자유, 모험 — 당신을 움직이는 근본적인 에너지원
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="px-3 py-1 bg-purple-500/20 rounded-full text-purple-300 text-xs">
+                      자기결정이론 (SDT) — Deci & Ryan
+                    </span>
+                    <span className="px-3 py-1 bg-purple-500/20 rounded-full text-purple-300 text-xs">
+                      욕구위계이론 — Maslow
+                    </span>
+                    <span className="px-3 py-1 bg-purple-500/20 rounded-full text-purple-300 text-xs">
+                      성취동기이론 — McClelland
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. 점화 조건 */}
+            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 hover:border-orange-500/30 transition-colors">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <span className="text-2xl">🔥</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white mb-2">6가지 점화 조건</h3>
+                  <p className="text-white/70 mb-3">
+                    경쟁, 복잡성, 마감, 시선, 자율, 위기 — 언제 당신의 잠재력이 폭발하는가
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="px-3 py-1 bg-orange-500/20 rounded-full text-orange-300 text-xs">
+                      몰입이론 (Flow) — Csikszentmihalyi
+                    </span>
+                    <span className="px-3 py-1 bg-orange-500/20 rounded-full text-orange-300 text-xs">
+                      각성이론 — Yerkes-Dodson
+                    </span>
+                    <span className="px-3 py-1 bg-orange-500/20 rounded-full text-orange-300 text-xs">
+                      자기효능감 — Bandura
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. 신화 원형 */}
+            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 hover:border-pink-500/30 transition-colors">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-pink-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <span className="text-2xl">🏛️</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white mb-2">8가지 신화 원형 & 48 인물</h3>
+                  <p className="text-white/70 mb-3">
+                    정복자, 현자, 창조자, 군주, 치유자, 수호자, 반역자, 탐험가 — 집단무의식에 새겨진 인간 유형
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="px-3 py-1 bg-pink-500/20 rounded-full text-pink-300 text-xs">
+                      원형이론 (Archetype) — Carl Jung
+                    </span>
+                    <span className="px-3 py-1 bg-pink-500/20 rounded-full text-pink-300 text-xs">
+                      영웅의 여정 — Joseph Campbell
+                    </span>
+                    <span className="px-3 py-1 bg-pink-500/20 rounded-full text-pink-300 text-xs">
+                      브랜드 원형 — Mark & Pearson
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 4. 성숙도 */}
+            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 hover:border-green-500/30 transition-colors">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <span className="text-2xl">🌱</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white mb-2">4단계 성숙도</h3>
+                  <p className="text-white/70 mb-3">
+                    그림자 → 각성 → 통합 → 초월 — 같은 동기도 성숙도에 따라 전혀 다르게 발현됩니다
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="px-3 py-1 bg-green-500/20 rounded-full text-green-300 text-xs">
+                      개성화 (Individuation) — Carl Jung
+                    </span>
+                    <span className="px-3 py-1 bg-green-500/20 rounded-full text-green-300 text-xs">
+                      자아발달이론 — Loevinger
+                    </span>
+                    <span className="px-3 py-1 bg-green-500/20 rounded-full text-green-300 text-xs">
+                      나선역학 (Spiral Dynamics)
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 5. 운영 방식 */}
+            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 hover:border-blue-500/30 transition-colors">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <span className="text-2xl">⚙️</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white mb-2">운영 방식 (Operation Style)</h3>
+                  <p className="text-white/70 mb-3">
+                    내적↔외적 동기, 즉각↔숙고, 능동↔수동, 독립↔협력 — 동기를 실현하는 방식의 차이
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="px-3 py-1 bg-blue-500/20 rounded-full text-blue-300 text-xs">
+                      조절초점이론 — Higgins
+                    </span>
+                    <span className="px-3 py-1 bg-blue-500/20 rounded-full text-blue-300 text-xs">
+                      인지양식이론 — Witkin
+                    </span>
+                    <span className="px-3 py-1 bg-blue-500/20 rounded-full text-blue-300 text-xs">
+                      행동활성화체계 — Gray
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 6. 에너지 패턴 */}
+            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 hover:border-cyan-500/30 transition-colors">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-cyan-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <span className="text-2xl">⚡</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white mb-2">에너지 패턴</h3>
+                  <p className="text-white/70 mb-3">
+                    충전 요인, 소진 요인, 지속가능성, 번아웃 위험도 — 장기적으로 건강하게 일하는 법
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="px-3 py-1 bg-cyan-500/20 rounded-full text-cyan-300 text-xs">
+                      번아웃 모델 — Maslach
+                    </span>
+                    <span className="px-3 py-1 bg-cyan-500/20 rounded-full text-cyan-300 text-xs">
+                      직무요구-자원 모델 — Bakker
+                    </span>
+                    <span className="px-3 py-1 bg-cyan-500/20 rounded-full text-cyan-300 text-xs">
+                      에너지 관리 — Loehr & Schwartz
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 7. 숨겨진 동기 */}
+            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 hover:border-violet-500/30 transition-colors">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-violet-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <span className="text-2xl">🌙</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white mb-2">숨겨진 동기 (Shadow Motives)</h3>
+                  <p className="text-white/70 mb-3">
+                    그림자, 투사, 보상심리 — 의식하지 못하지만 당신의 선택에 영향을 미치는 것들
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="px-3 py-1 bg-violet-500/20 rounded-full text-violet-300 text-xs">
+                      그림자 (Shadow) — Carl Jung
+                    </span>
+                    <span className="px-3 py-1 bg-violet-500/20 rounded-full text-violet-300 text-xs">
+                      방어기제 — Anna Freud
+                    </span>
+                    <span className="px-3 py-1 bg-violet-500/20 rounded-full text-violet-300 text-xs">
+                      암묵적 동기 — McClelland
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 8. 동기 충돌 */}
+            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 hover:border-red-500/30 transition-colors">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <span className="text-2xl">⚔️</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white mb-2">동기 충돌 (Motive Conflicts)</h3>
+                  <p className="text-white/70 mb-3">
+                    성취 vs 관계, 자유 vs 안정 — 내면의 갈등이 의사결정을 어렵게 만드는 지점
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="px-3 py-1 bg-red-500/20 rounded-full text-red-300 text-xs">
+                      접근-회피 갈등 — Lewin
+                    </span>
+                    <span className="px-3 py-1 bg-red-500/20 rounded-full text-red-300 text-xs">
+                      가치갈등이론 — Schwartz
+                    </span>
+                    <span className="px-3 py-1 bg-red-500/20 rounded-full text-red-300 text-xs">
+                      동기적 양가감정 — Emmons
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 9. 상황별 동기 변화 */}
+            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 hover:border-amber-500/30 transition-colors">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <span className="text-2xl">🔄</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white mb-2">상황별 동기 변화 (Context Shifts)</h3>
+                  <p className="text-white/70 mb-3">
+                    평상시, 압박 상황, 성장 기회, 위기 상황 — 상황에 따라 다르게 발현되는 동기 패턴
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="px-3 py-1 bg-amber-500/20 rounded-full text-amber-300 text-xs">
+                      상황주의 — Mischel
+                    </span>
+                    <span className="px-3 py-1 bg-amber-500/20 rounded-full text-amber-300 text-xs">
+                      스트레스-대처 이론 — Lazarus
+                    </span>
+                    <span className="px-3 py-1 bg-amber-500/20 rounded-full text-amber-300 text-xs">
+                      적응적 무의식 — Wilson
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 하단 요약 */}
+          <div className="mt-12 bg-gradient-to-r from-purple-900/30 via-pink-900/20 to-indigo-900/30 rounded-2xl p-6 border border-white/10 text-center">
+            <p className="text-white/80 leading-relaxed">
+              MET Mythic은 <strong className="text-purple-300">30개 이상의 심리학 이론</strong>을 통합하여 
+              당신의 동기 구조를 다차원적으로 분석합니다.<br />
+              단일 이론의 한계를 넘어, <strong className="text-pink-300">교차 검증</strong>을 통해 
+              더 정확하고 실용적인 인사이트를 제공합니다.
+            </p>
           </div>
         </div>
       </section>
