@@ -658,31 +658,41 @@ function matchArchetypes(motivation: UserMotivation): ArchetypeMatchExtended[] {
     const weights = ARCHETYPE_WEIGHTS[archetype];
     const conditions = ARCHETYPE_CONDITIONS[archetype];
 
+    // 🔧 FIX: 가중합 계산 (기본 점수)
+    let totalWeight = 0;
     for (const [motive, weight] of Object.entries(weights)) {
-      const userValue = motivation[motive as MotiveSource] || 0;
-      score += (userValue / 100) * (weight as number) * 100;
+      const userValue = motivation[motive as MotiveSource] ?? 50; // 🔧 FIX: 기본값 50
+      const safeValue = Math.max(10, userValue); // 🔧 FIX: 최소 10 보장
+      score += (safeValue / 100) * (weight as number) * 100;
+      totalWeight += (weight as number);
+    }
+    
+    // 🔧 FIX: 가중합 정규화
+    if (totalWeight > 0) {
+      score = score / totalWeight;
     }
 
     let bonus = 0;
     if (conditions.primary) {
-      const val = motivation[conditions.primary.motive] || 0;
+      const val = motivation[conditions.primary.motive] ?? 50;
       const diff = val - conditions.primary.min;
-      if (diff >= 0) bonus += 8 + (diff * 0.12);
-      else bonus -= 15 + (Math.abs(diff) * 0.2);
+      if (diff >= 0) bonus += 5 + (diff * 0.08); // 🔧 FIX: 보너스 완화
+      else bonus -= 5 + (Math.abs(diff) * 0.1); // 🔧 FIX: 페널티 완화
     }
     if (conditions.secondary) {
-      const val = motivation[conditions.secondary.motive] || 0;
-      if (val >= conditions.secondary.min) bonus += 4;
-      else bonus -= 6;
+      const val = motivation[conditions.secondary.motive] ?? 50;
+      if (val >= conditions.secondary.min) bonus += 3;
+      else bonus -= 3;
     }
     if (conditions.exclude) {
-      const val = motivation[conditions.exclude.motive] || 0;
+      const val = motivation[conditions.exclude.motive] ?? 50;
       const diff = val - conditions.exclude.max;
-      if (diff > 0) bonus -= 12 + (diff * 0.25);
-      else bonus += 3;
+      if (diff > 0) bonus -= 5 + (diff * 0.1);
+      else bonus += 2;
     }
 
-    score = Math.max(0, Math.min(100, score + bonus));
+    // 🔧 FIX: 최소 10점 보장
+    score = Math.max(10, Math.min(100, score + bonus));
 
     let grade: 'S' | 'A' | 'B' | 'C' | 'D' | 'F';
     if (score >= 85) grade = 'S';

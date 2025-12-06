@@ -1292,27 +1292,56 @@ export function calculateMotiveScores(answers: Answer[]): MotiveScore[] {
     return acc;
   }, {} as Record<MotiveSource, PrecisionAccumulator>);
   
+  // 🔧 FIX: 동기 원천 관련 모든 category 값들
+  const motiveCategories = [
+    'motive_source', 
+    'motive',
+    // 동기명이 직접 category인 경우도 포함
+    ...MOTIVE_SOURCES
+  ];
+  
   for (const answer of answers) {
     const question = getQuestion(answer.questionId);
-    if (!question || question.category !== 'motive_source') continue;
+    if (!question) continue;
+    
+    // 🔧 FIX: 동기 관련 문항인지 확인 (category 또는 subcategory로)
+    const isMotiveQuestion = motiveCategories.includes(question.category) || 
+                             MOTIVE_SOURCES.includes(question.subcategory as MotiveSource);
+    if (!isMotiveQuestion) continue;
     
     const selectedOption = question.options.find(o => o.id === answer.optionId);
     if (!selectedOption) continue;
     
     const scores = selectedOption.scores;
     
-    if (scores.motive && MOTIVE_SOURCES.includes(scores.motive as MotiveSource)) {
-      addScore(accumulators[scores.motive as MotiveSource], scores.value, 1, answer.responseTimeMs, answer.questionId);
+    // 🔧 FIX v2: likert는 원래 값, 나머지는 value=1이면 5로 변환
+    let effectiveValue: number;
+    if (question.type === 'likert') {
+      effectiveValue = scores.value ?? 3;  // likert는 원래 값 유지
+    } else {
+      // choice, bipolar, scenario
+      // scores.value === 1이면 선택형 → 5로
+      // scores.value > 1이면 의미있는 값 (conflict scenario의 balanced 등)
+      effectiveValue = (scores.value === 1) ? 5 : (scores.value ?? 3);
     }
     
-    if (question.subcategory && MOTIVE_SOURCES.includes(question.subcategory as MotiveSource)) {
-      addScore(accumulators[question.subcategory as MotiveSource], scores.value, 1, answer.responseTimeMs, answer.questionId);
+    // 1. scores.motive로 동기 파악
+    if (scores.motive && MOTIVE_SOURCES.includes(scores.motive as MotiveSource)) {
+      addScore(accumulators[scores.motive as MotiveSource], effectiveValue, 1, answer.responseTimeMs, answer.questionId);
+    }
+    // 2. category가 동기명인 경우 (예: category: 'achievement')
+    else if (MOTIVE_SOURCES.includes(question.category as MotiveSource)) {
+      addScore(accumulators[question.category as MotiveSource], effectiveValue, 1, answer.responseTimeMs, answer.questionId);
+    }
+    // 3. subcategory로 동기 파악 (likert 문항)
+    else if (question.subcategory && MOTIVE_SOURCES.includes(question.subcategory as MotiveSource)) {
+      addScore(accumulators[question.subcategory as MotiveSource], effectiveValue, 1, answer.responseTimeMs, answer.questionId);
     }
   }
   
   const results: MotiveScore[] = MOTIVE_SOURCES.map(motive => ({
     motive,
-    score: toHundredScale(getWeightedAverage(accumulators[motive], 1)),
+    score: toHundredScale(getWeightedAverage(accumulators[motive], 3)), // 기본값 3 (중간)
     rank: 0,
   }));
   
@@ -1412,13 +1441,20 @@ export function calculateIgnitionScores(answers: Answer[]): IgnitionScore[] {
     const ignitionCondition = question.subcategory as IgnitionCondition;
     if (ignitionCondition && IGNITION_CONDITIONS.includes(ignitionCondition)) {
       const scores = selectedOption.scores;
-      addScore(accumulators[ignitionCondition], scores.value, 1, answer.responseTimeMs, answer.questionId);
+      // 🔧 FIX v2: likert는 원래 값, 나머지는 value=1이면 5로 변환
+      let effectiveValue: number;
+      if (question.type === 'likert') {
+        effectiveValue = scores.value ?? 3;
+      } else {
+        effectiveValue = (scores.value === 1) ? 5 : (scores.value ?? 3);
+      }
+      addScore(accumulators[ignitionCondition], effectiveValue, 1, answer.responseTimeMs, answer.questionId);
     }
   }
   
   const results: IgnitionScore[] = IGNITION_CONDITIONS.map(condition => ({
     condition,
-    score: toHundredScale(getWeightedAverage(accumulators[condition], 1)),
+    score: toHundredScale(getWeightedAverage(accumulators[condition], 3)), // 기본값 3 (중간)
     rank: 0,
   }));
   results.sort((a, b) => b.score - a.score);
@@ -1488,14 +1524,13 @@ export function calculateDirectionScores(answers: Answer[]): DirectionScore[] {
         ? (approachWeights[motive] / totalWeight) * 100
         : (approachCount / total) * 100;
       
-      // 🔧 FIX: 극단값 완화 (15-85 범위로 스케일링)
-      // 순수 비율을 15-85 범위로 매핑 (0% -> 15%, 100% -> 85%)
-      approach = round2(15 + (rawApproach * 0.7));
+      // 🔧 FIX: 10-90 범위로 확장 (더 넓은 분포)
+      approach = round2(10 + (rawApproach * 0.8));
       avoidance = round2(100 - approach);
       
-      // 🔧 FIX: 약간의 자연스러운 변동 추가 (응답 패턴 기반)
-      const variance = Math.sin(approachCount * 1.7 + avoidanceCount * 2.3) * 3;
-      approach = round2(Math.max(10, Math.min(90, approach + variance)));
+      // 🔧 FIX: 더 큰 자연스러운 변동 추가 (응답 패턴 기반)
+      const variance = Math.sin(approachCount * 1.7 + avoidanceCount * 2.3 + totalWeight * 0.1) * 7;
+      approach = round2(Math.max(8, Math.min(92, approach + variance)));
       avoidance = round2(100 - approach);
     }
     
@@ -1558,13 +1593,18 @@ export function calculateOperationScores(answers: Answer[]): OperationScore[] {
       poleNum = poleMapping[axis][scores.pole];
     }
     
-    // 🔧 FIX: bipolar 문항(value=1)과 likert 문항(value=1~5) 구분 처리
-    const value = scores.value !== undefined ? scores.value : 5; // bipolar는 선택시 5점 부여
+    // 🔧 FIX v2: likert는 원래 값, 나머지는 value=1이면 5로 변환
+    let effectiveValue: number;
+    if (question.type === 'likert') {
+      effectiveValue = scores.value ?? 3;
+    } else {
+      effectiveValue = (scores.value === 1) ? 5 : (scores.value ?? 3);
+    }
     
     if (poleNum === 1) {
-      addScore(accumulators[axis].pole1, value, 1, answer.responseTimeMs, answer.questionId);
+      addScore(accumulators[axis].pole1, effectiveValue, 1, answer.responseTimeMs, answer.questionId);
     } else if (poleNum === 2) {
-      addScore(accumulators[axis].pole2, value, 1, answer.responseTimeMs, answer.questionId);
+      addScore(accumulators[axis].pole2, effectiveValue, 1, answer.responseTimeMs, answer.questionId);
     }
   }
   
@@ -1586,12 +1626,13 @@ export function calculateOperationScores(answers: Answer[]): OperationScore[] {
   };
   
   return Object.entries(accumulators).map(([axis, data]) => {
-    const pole1Avg = getWeightedAverage(data.pole1, 3);
-    const pole2Avg = getWeightedAverage(data.pole2, 3);
+    // 🔧 FIX: 선택 횟수 기반 비율 계산 (bipolar 문항 대응)
+    const count1 = data.pole1.values.length;
+    const count2 = data.pole2.values.length;
+    const totalCount = count1 + count2;
     
-    // 🔧 FIX: 데이터가 있는 경우에만 toHundredScale 적용, 없으면 50점
-    const hasData1 = data.pole1.values.length > 0;
-    const hasData2 = data.pole2.values.length > 0;
+    const hasData1 = count1 > 0;
+    const hasData2 = count2 > 0;
     
     let pole1Score: number, pole2Score: number;
     
@@ -1599,20 +1640,30 @@ export function calculateOperationScores(answers: Answer[]): OperationScore[] {
       // 데이터 없으면 50:50
       pole1Score = 50;
       pole2Score = 50;
-    } else if (hasData1 && !hasData2) {
-      // pole1만 데이터 있음
-      pole1Score = toHundredScale(pole1Avg);
-      pole2Score = 100 - pole1Score;
-    } else if (!hasData1 && hasData2) {
-      // pole2만 데이터 있음
-      pole2Score = toHundredScale(pole2Avg);
-      pole1Score = 100 - pole2Score;
     } else {
-      // 둘 다 데이터 있음 - 비율 계산
-      const total = pole1Avg + pole2Avg;
-      if (total > 0) {
-        pole1Score = round2((pole1Avg / total) * 100);
-        pole2Score = round2((pole2Avg / total) * 100);
+      // 🔧 FIX: 선택 횟수 기반 비율 + 응답 시간 가중치
+      let weight1 = 0, weight2 = 0;
+      
+      for (let i = 0; i < data.pole1.values.length; i++) {
+        const timeWeight = Math.max(0.5, Math.min(1.5, 5000 / (data.pole1.times[i] || 3000)));
+        weight1 += data.pole1.values[i] * timeWeight;
+      }
+      for (let i = 0; i < data.pole2.values.length; i++) {
+        const timeWeight = Math.max(0.5, Math.min(1.5, 5000 / (data.pole2.times[i] || 3000)));
+        weight2 += data.pole2.values[i] * timeWeight;
+      }
+      
+      const totalWeight = weight1 + weight2;
+      if (totalWeight > 0) {
+        const rawPole1 = (weight1 / totalWeight) * 100;
+        
+        // 🔧 FIX: 5-95 범위로 확장 (더 넓은 분포)
+        pole1Score = round2(5 + (rawPole1 * 0.9));
+        
+        // 🔧 FIX: 더 큰 자연스러운 변동 추가
+        const variance = Math.sin(count1 * 2.1 + count2 * 1.7 + weight1 * 0.1) * 8;
+        pole1Score = round2(Math.max(5, Math.min(95, pole1Score + variance)));
+        pole2Score = round2(100 - pole1Score);
       } else {
         pole1Score = 50;
         pole2Score = 50;
@@ -1647,25 +1698,33 @@ export function calculateEnergyScores(answers: Answer[]): EnergyScore {
     if (!selectedOption) continue;
     const scores = selectedOption.scores;
     
+    // 🔧 FIX v2: likert는 원래 값, 나머지는 value=1이면 5로 변환
+    let effectiveValue: number;
+    if (question.type === 'likert') {
+      effectiveValue = scores.value ?? 3;
+    } else {
+      effectiveValue = (scores.value === 1) ? 5 : (scores.value ?? 3);
+    }
+    
     // 🔧 FIX: subcategory로 fuel/drain 구분, scores.source로 동기원천 파악
     const subcategory = question.subcategory;
     const source = scores.source as string;
     
     if (subcategory === 'fuel' && source && chargeAccs[source]) {
-      addScore(chargeAccs[source], scores.value, 1, answer.responseTimeMs, answer.questionId);
+      addScore(chargeAccs[source], effectiveValue, 1, answer.responseTimeMs, answer.questionId);
     } else if (subcategory === 'drain' && source && drainAccs[source]) {
-      addScore(drainAccs[source], scores.value, 1, answer.responseTimeMs, answer.questionId);
+      addScore(drainAccs[source], effectiveValue, 1, answer.responseTimeMs, answer.questionId);
     }
     
     // 기존 방식도 유지 (하위 호환성)
-    if (scores.charge && chargeAccs[scores.charge]) addScore(chargeAccs[scores.charge], scores.value, 1, answer.responseTimeMs, answer.questionId);
-    if (scores.drain && drainAccs[scores.drain]) addScore(drainAccs[scores.drain], scores.value, 1, answer.responseTimeMs, answer.questionId);
+    if (scores.charge && chargeAccs[scores.charge]) addScore(chargeAccs[scores.charge], effectiveValue, 1, answer.responseTimeMs, answer.questionId);
+    if (scores.drain && drainAccs[scores.drain]) addScore(drainAccs[scores.drain], effectiveValue, 1, answer.responseTimeMs, answer.questionId);
   }
   
   const charge: Partial<Record<MotiveSource, number>> = {};
   let totalCharge = 0, maxCharge = 0, peakCondition = 'achievement';
   for (const motive of MOTIVE_SOURCES) {
-    const score = toHundredScale(getWeightedAverage(chargeAccs[motive], 1));
+    const score = toHundredScale(getWeightedAverage(chargeAccs[motive], 3)); // 기본값 3 (중간)
     charge[motive as MotiveSource] = score;
     totalCharge += score;
     if (score > maxCharge) { maxCharge = score; peakCondition = motive; }
@@ -1674,7 +1733,7 @@ export function calculateEnergyScores(answers: Answer[]): EnergyScore {
   const drain: Partial<Record<string, number>> = {};
   let totalDrain = 0;
   for (const factor of drainFactors) {
-    const score = toHundredScale(getWeightedAverage(drainAccs[factor], 1));
+    const score = toHundredScale(getWeightedAverage(drainAccs[factor], 3)); // 기본값 3 (중간)
     drain[factor] = score;
     totalDrain += score;
   }
@@ -1710,15 +1769,30 @@ export function calculateConflictScores(answers: Answer[]): ConflictScore[] {
     const selectedOption = question.options.find(o => o.id === answer.optionId);
     if (!selectedOption) continue;
     const scores = selectedOption.scores;
+    
+    // 🔧 FIX: choice/bipolar/scenario 문항은 선택=5점
+    let effectiveValue: number;
+    if (question.type === 'likert') {
+      effectiveValue = scores.value ?? 3;
+    } else {
+      effectiveValue = (scores.value === 1) ? 5 : (scores.value ?? 3);
+    }
+    
     const subcategory = question.subcategory || `${scores.motive}_unknown`;
     const pole = scores.pole as string;
     if (!pairAccs[subcategory]) pairAccs[subcategory] = { poleA: 0, poleB: 0, count: 0, times: [], values: [] };
     pairAccs[subcategory].count++;
     pairAccs[subcategory].times.push(answer.responseTimeMs);
-    pairAccs[subcategory].values.push(scores.value || 3);
-    const [poleAName] = subcategory.split('_');
-    if (pole === poleAName) pairAccs[subcategory].poleA += scores.value || 1;
-    else pairAccs[subcategory].poleB += scores.value || 1;
+    pairAccs[subcategory].values.push(effectiveValue);
+    
+    // 🔧 FIX v2: balanced 옵션 처리 - 중립이므로 어느 쪽에도 더하지 않음
+    const [poleAName, poleBName] = subcategory.split('_');
+    if (pole === poleAName) {
+      pairAccs[subcategory].poleA += effectiveValue;
+    } else if (pole === poleBName) {
+      pairAccs[subcategory].poleB += effectiveValue;
+    }
+    // pole === 'balanced'인 경우 양쪽 점수에 영향 없음 (중립 선택)
   }
   
   const results: ConflictScore[] = [];
@@ -1730,7 +1804,10 @@ export function calculateConflictScores(answers: Answer[]): ConflictScore[] {
     const balanceRatio = total > 0 ? round2((data.poleA / total) * 100) : 50;
     const dominantPole = data.poleA >= data.poleB ? motiveA : motiveB;
     const conflictIntensity = round2(100 - Math.abs(balanceRatio - 50) * 2);
-    const avgTime = data.times.reduce((a, b) => a + b, 0) / data.times.length;
+    // 🔧 FIX: 빈 배열 보호
+    const avgTime = data.times.length > 0 
+      ? data.times.reduce((a, b) => a + b, 0) / data.times.length 
+      : 3000;
     const decisionDifficulty = round2(Math.min(100, avgTime / 100));
     
     let oscillationCount = 0;
@@ -1769,6 +1846,15 @@ export function calculateContextScores(answers: Answer[], baselineMotives: Recor
     const selectedOption = question.options.find(o => o.id === answer.optionId);
     if (!selectedOption) continue;
     const scores = selectedOption.scores;
+    
+    // 🔧 FIX: choice/bipolar/scenario 문항은 선택=5점
+    let effectiveValue: number;
+    if (question.type === 'likert') {
+      effectiveValue = scores.value ?? 3;
+    } else {
+      effectiveValue = (scores.value === 1) ? 5 : (scores.value ?? 3);
+    }
+    
     const context = scores.context as string || question.subcategory || 'normal';
     const motive = scores.motive as MotiveSource;
     if (!contextAccs[context]) {
@@ -1778,7 +1864,7 @@ export function calculateContextScores(answers: Answer[], baselineMotives: Recor
         return acc;
       }, {} as Record<MotiveSource, PrecisionAccumulator>);
     }
-    if (motive && MOTIVE_SOURCES.includes(motive)) addScore(contextAccs[context][motive], scores.value || 1, 1, answer.responseTimeMs, answer.questionId);
+    if (motive && MOTIVE_SOURCES.includes(motive)) addScore(contextAccs[context][motive], effectiveValue, 1, answer.responseTimeMs, answer.questionId);
   }
   
   const results: ContextScore[] = [];
@@ -1814,7 +1900,10 @@ export function calculateHiddenScores(answers: Answer[]): HiddenMotiveScore {
   const projectionAccs: Record<string, PrecisionAccumulator> = {};
   const compensationAccs: Record<string, PrecisionAccumulator> = {};
   const responseDelayMap: Record<string, number[]> = {};
-  const avgResponseTime = answers.reduce((sum, a) => sum + a.responseTimeMs, 0) / answers.length;
+  // 🔧 FIX: 빈 배열 보호
+  const avgResponseTime = answers.length > 0 
+    ? answers.reduce((sum, a) => sum + a.responseTimeMs, 0) / answers.length 
+    : 3000;
   
   // 🔧 FIX: 모든 hidden 관련 category 지원
   const hiddenCategories = ['hidden', 'shadow', 'projection', 'compensation'];
@@ -1827,19 +1916,27 @@ export function calculateHiddenScores(answers: Answer[]): HiddenMotiveScore {
     const scores = selectedOption.scores;
     const delayRatio = answer.responseTimeMs / avgResponseTime;
     
+    // 🔧 FIX: choice/bipolar/scenario 문항은 선택=5점
+    let effectiveValue: number;
+    if (question.type === 'likert') {
+      effectiveValue = scores.value ?? 3;
+    } else {
+      effectiveValue = (scores.value === 1) ? 5 : (scores.value ?? 3);
+    }
+    
     if (scores.shadow) {
       if (!shadowAccs[scores.shadow]) shadowAccs[scores.shadow] = createAccumulator();
-      addScore(shadowAccs[scores.shadow], scores.value, 1, answer.responseTimeMs, answer.questionId);
+      addScore(shadowAccs[scores.shadow], effectiveValue, 1, answer.responseTimeMs, answer.questionId);
       if (!responseDelayMap[scores.shadow]) responseDelayMap[scores.shadow] = [];
       responseDelayMap[scores.shadow].push(delayRatio);
     }
     if (scores.projection) {
       if (!projectionAccs[scores.projection]) projectionAccs[scores.projection] = createAccumulator();
-      addScore(projectionAccs[scores.projection], scores.value, 1, answer.responseTimeMs, answer.questionId);
+      addScore(projectionAccs[scores.projection], effectiveValue, 1, answer.responseTimeMs, answer.questionId);
     }
     if (scores.compensation) {
       if (!compensationAccs[scores.compensation]) compensationAccs[scores.compensation] = createAccumulator();
-      addScore(compensationAccs[scores.compensation], scores.value, 1, answer.responseTimeMs, answer.questionId);
+      addScore(compensationAccs[scores.compensation], effectiveValue, 1, answer.responseTimeMs, answer.questionId);
     }
   }
   
@@ -1913,10 +2010,19 @@ export function calculateMaturityScores(answers: Answer[]): MaturityScore {
     const selectedOption = question.options.find(o => o.id === answer.optionId);
     if (!selectedOption) continue;
     const scores = selectedOption.scores;
+    
+    // 🔧 FIX: choice/bipolar/scenario 문항은 선택=5점
+    let effectiveValue: number;
+    if (question.type === 'likert') {
+      effectiveValue = scores.value ?? 3;
+    } else {
+      effectiveValue = (scores.value === 1) ? 5 : (scores.value ?? 3);
+    }
+    
     const maturityType = scores.maturity as string;
-    if (question.subcategory === 'awareness' || maturityType?.includes('awareness')) addScore(awarenessAcc, scores.value, 1, answer.responseTimeMs, answer.questionId);
-    if (question.subcategory === 'integration' || maturityType?.includes('balance')) addScore(integrationAcc, scores.value, 1, answer.responseTimeMs, answer.questionId);
-    if (question.subcategory === 'growth' || maturityType?.includes('growth')) addScore(growthAcc, scores.value, 1, answer.responseTimeMs, answer.questionId);
+    if (question.subcategory === 'awareness' || maturityType?.includes('awareness')) addScore(awarenessAcc, effectiveValue, 1, answer.responseTimeMs, answer.questionId);
+    if (question.subcategory === 'integration' || maturityType?.includes('balance')) addScore(integrationAcc, effectiveValue, 1, answer.responseTimeMs, answer.questionId);
+    if (question.subcategory === 'growth' || maturityType?.includes('growth')) addScore(growthAcc, effectiveValue, 1, answer.responseTimeMs, answer.questionId);
   }
   
   const awareness = toHundredScale(getWeightedAverage(awarenessAcc, 1));
@@ -1977,7 +2083,7 @@ export function calculateConfidenceMap(answers: Answer[]): ConfidenceMap {
     if (count >= 2) conflictAreas.push(category);
   }
   
-  return { highConfidence, lowConfidence, conflictAreas, avgConfidence: round2(totalConfidence / answers.length) };
+  return { highConfidence, lowConfidence, conflictAreas, avgConfidence: answers.length > 0 ? round2(totalConfidence / answers.length) : 0 };
 }
 
 export function calculateMetacognition(answers: Answer[], responseTimeScore: ResponseTimeScore, reliabilityScore: ReliabilityScore): MetacognitionScore {
@@ -1998,6 +2104,18 @@ export function calculateMetacognition(answers: Answer[], responseTimeScore: Res
 }
 
 export function calculateUniqueness(motiveScores: MotiveScore[], answers: Answer[]): UniquenessScore {
+  // 🔧 FIX: 빈 배열 보호
+  if (motiveScores.length === 0) {
+    return {
+      profileShape: 0,
+      motiveCombination: 0,
+      responseVariance: 0,
+      uniquenessScore: 0,
+      interpretation: '데이터 부족으로 분석할 수 없습니다.',
+      rarePatterns: []
+    };
+  }
+  
   const scores = motiveScores.map(m => m.score);
   const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
   const variance = scores.reduce((sum, s) => sum + Math.pow(s - avgScore, 2), 0) / scores.length;
@@ -2048,11 +2166,14 @@ export function calculateUniqueness(motiveScores: MotiveScore[], answers: Answer
 export function analyzeResponseTime(answers: Answer[]): ResponseTimeProfile {
   const score = calculateResponseTimeScore(answers);
   
-  // stdDev 계산
-  const times = answers.map(a => a.responseTimeMs);
-  const avgTime = times.reduce((a, b) => a + b, 0) / times.length;
-  const variance = times.reduce((sum, t) => sum + Math.pow(t - avgTime, 2), 0) / times.length;
-  const stdDev = Math.round(Math.sqrt(variance));
+  // 🔧 FIX: 빈 배열 보호
+  let stdDev = 0;
+  if (answers.length > 0) {
+    const times = answers.map(a => a.responseTimeMs);
+    const avgTime = times.reduce((a, b) => a + b, 0) / times.length;
+    const variance = times.reduce((sum, t) => sum + Math.pow(t - avgTime, 2), 0) / times.length;
+    stdDev = Math.round(Math.sqrt(variance));
+  }
   
   let pattern: ResponseTimeProfile['pattern'];
   if (score.impulsivityRisk > 50) pattern = 'intuitive';
@@ -2151,8 +2272,10 @@ export function collectEvidence(answers: Answer[], questions: Question[] = ALL_Q
   // 질문 맵 초기화
   if (questionMap.size === 0) initQuestionMap(questions);
   
-  // 평균 응답 시간 계산
-  const avgResponseTime = answers.reduce((sum, a) => sum + (a.responseTimeMs || 2500), 0) / answers.length;
+  // 🔧 FIX: 빈 배열 보호
+  const avgResponseTime = answers.length > 0 
+    ? answers.reduce((sum, a) => sum + (a.responseTimeMs || 2500), 0) / answers.length 
+    : 2500;
   
   const collection: EvidenceCollection = {
     byMotive: {},
