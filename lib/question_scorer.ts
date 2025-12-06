@@ -124,12 +124,58 @@ export function analyzeExtremePatterns(answers: Answer[]): ExtremePatternAnalysi
   else if (penalty >= 5) pattern = 'mild';
   else pattern = 'none';
   
+  // 🔧 FIX: 누락된 UI 표시용 값 계산
+  const extremeCount = values.filter(v => v === 1 || v === 5).length;
+  const neutralCount = values.filter(v => v === 3).length;
+  const totalCount = values.length || 1;
+  
+  const extremeResponseRatio = round2((extremeCount / totalCount) * 100);
+  const neutralAvoidance = round2(100 - (neutralCount / totalCount) * 100);
+  
+  // 양극화 점수: 극단값 비율 + 연속 패턴 강도
+  const streakIntensity = extremeStreaks.reduce((sum, s) => sum + s, 0) / Math.max(1, extremeStreaks.length);
+  const polarizationScore = round2(extremeResponseRatio * 0.6 + (streakIntensity / 10) * 40);
+  
+  // 해석 문구
+  let interpretation: string;
+  if (polarizationScore >= 70) {
+    interpretation = '매우 강한 극단적 응답 경향. 확고한 신념을 가지거나, 빠른 판단을 선호합니다.';
+  } else if (polarizationScore >= 50) {
+    interpretation = '다소 극단적인 응답 패턴. 명확한 선호와 비선호가 있습니다.';
+  } else if (polarizationScore >= 30) {
+    interpretation = '균형 잡힌 응답 패턴. 상황에 따라 유연하게 판단합니다.';
+  } else {
+    interpretation = '신중한 응답 패턴. 중립적이거나 상황 의존적 판단을 선호합니다.';
+  }
+  
+  // 강세 동기 (극단값이 많은 카테고리)
+  const motiveExtremes = new Map<string, number>();
+  for (const a of answers) {
+    const q = getQuestion(a.questionId);
+    const opt = q?.options.find(o => o.id === a.optionId);
+    const v = opt?.scores.value || 3;
+    if ((v === 1 || v === 5) && q?.category === 'motive') {
+      const motive = q.subcategory || 'unknown';
+      motiveExtremes.set(motive, (motiveExtremes.get(motive) || 0) + 1);
+    }
+  }
+  const dominantMotives = Array.from(motiveExtremes.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([m]) => m);
+  
   return {
     consecutiveExtremes: maxStreak,
     extremeStreaks,
     penalty,
     pattern,
-    details
+    details,
+    // 🆕 UI 표시용 추가 값
+    extremeResponseRatio,
+    polarizationScore,
+    neutralAvoidance,
+    interpretation,
+    dominantMotives
   };
 }
 
@@ -982,10 +1028,10 @@ export function calculateReliabilityScore(
   
   // 극단값 분석
   const extremeCount = values.filter(v => v === 1 || v === 5).length;
-  const extremeRatio = extremeCount / values.length;
+  const extremeRatio = values.length > 0 ? extremeCount / values.length : 0;
   
   const middleCount = values.filter(v => v === 3).length;
-  const middleRatio = middleCount / values.length;
+  const middleRatio = values.length > 0 ? middleCount / values.length : 0;
   
   const valueCounts = new Map<number, number>();
   for (const v of values) {
@@ -1518,19 +1564,14 @@ export function calculateDirectionScores(answers: Answer[]): DirectionScore[] {
       approach = 50;
       avoidance = 50;
     } else {
-      // 🔧 FIX: 가중치 기반 비율 계산 + 자연스러운 분포
+      // 가중치 기반 비율 계산 (인위적 보정 제거)
       const totalWeight = approachWeights[motive] + avoidanceWeights[motive];
       const rawApproach = totalWeight > 0 
         ? (approachWeights[motive] / totalWeight) * 100
         : (approachCount / total) * 100;
       
-      // 🔧 FIX: 10-90 범위로 확장 (더 넓은 분포)
-      approach = round2(10 + (rawApproach * 0.8));
-      avoidance = round2(100 - approach);
-      
-      // 🔧 FIX: 더 큰 자연스러운 변동 추가 (응답 패턴 기반)
-      const variance = Math.sin(approachCount * 1.7 + avoidanceCount * 2.3 + totalWeight * 0.1) * 7;
-      approach = round2(Math.max(8, Math.min(92, approach + variance)));
+      // 순수 비율 사용
+      approach = round2(rawApproach);
       avoidance = round2(100 - approach);
     }
     
@@ -1637,9 +1678,8 @@ export function calculateOperationScores(answers: Answer[]): OperationScore[] {
     let pole1Score: number, pole2Score: number;
     
     if (!hasData1 && !hasData2) {
-      // 데이터 없으면 50:50
-      pole1Score = 50;
-      pole2Score = 50;
+      // 🔧 FIX: 데이터 없으면 null 반환 (나중에 필터링)
+      return null;
     } else {
       // 🔧 FIX: 선택 횟수 기반 비율 + 응답 시간 가중치
       let weight1 = 0, weight2 = 0;
@@ -1657,12 +1697,8 @@ export function calculateOperationScores(answers: Answer[]): OperationScore[] {
       if (totalWeight > 0) {
         const rawPole1 = (weight1 / totalWeight) * 100;
         
-        // 🔧 FIX: 5-95 범위로 확장 (더 넓은 분포)
-        pole1Score = round2(5 + (rawPole1 * 0.9));
-        
-        // 🔧 FIX: 더 큰 자연스러운 변동 추가
-        const variance = Math.sin(count1 * 2.1 + count2 * 1.7 + weight1 * 0.1) * 8;
-        pole1Score = round2(Math.max(5, Math.min(95, pole1Score + variance)));
+        // 순수 비율 사용 (인위적 보정 제거)
+        pole1Score = round2(rawPole1);
         pole2Score = round2(100 - pole1Score);
       } else {
         pole1Score = 50;
@@ -1678,7 +1714,7 @@ export function calculateOperationScores(answers: Answer[]): OperationScore[] {
       pole1Score, pole2Score,
       ratio: round2((pole1Score / total) * 100),
     } as OperationScore;
-  });
+  }).filter((item): item is OperationScore => item !== null);  // 🔧 FIX: null 필터링
 }
 
 export function calculateEnergyScores(answers: Answer[]): EnergyScore {
@@ -1743,10 +1779,10 @@ export function calculateEnergyScores(answers: Answer[]): EnergyScore {
   
   return {
     charge, drain,
-    sustainability: round2(Math.max(0, 100 - avgDrain * 0.8)),
+    sustainability: round2(Math.max(0, 100 - avgDrain)),  // 순수 역관계
     peakCondition,
-    burnoutRisk: round2(Math.min(100, avgDrain * 1.2)),
-    recoverySpeed: round2(Math.min(100, avgCharge * 1.1)),
+    burnoutRisk: round2(Math.min(100, avgDrain)),  // 승수 제거
+    recoverySpeed: round2(Math.min(100, avgCharge)),  // 승수 제거
     energyBalance: round2(avgCharge - avgDrain)
   };
 }
@@ -2136,9 +2172,11 @@ export function calculateUniqueness(motiveScores: MotiveScore[], answers: Answer
   const valueCounts = new Map<number, number>();
   for (const v of values) valueCounts.set(v, (valueCounts.get(v) || 0) + 1);
   let entropy = 0;
-  for (const count of valueCounts.values()) {
-    const p = count / values.length;
-    if (p > 0) entropy -= p * Math.log2(p);
+  if (values.length > 0) {
+    for (const count of valueCounts.values()) {
+      const p = count / values.length;
+      if (p > 0) entropy -= p * Math.log2(p);
+    }
   }
   const responsePattern = round2((entropy / Math.log2(5)) * 100);
   
