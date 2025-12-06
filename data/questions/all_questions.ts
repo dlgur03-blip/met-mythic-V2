@@ -158,10 +158,10 @@ export const ALL_QUESTIONS = [
 // ============================================
 
 // 메타데이터가 병합된 문항들 (사회적 바람직성 점수 포함)
-export const QUESTIONS_WITH_METADATA = mergeQuestionMetadata(ALL_QUESTIONS as any);
+export const QUESTIONS_WITH_METADATA = mergeQuestionMetadata(ALL_QUESTIONS);
 
 // 역문항이 포함된 전체 문항 (Full 버전용 - 347문항)
-export const ALL_QUESTIONS_WITH_REVERSE = addReverseQuestions(ALL_QUESTIONS as any);
+export const ALL_QUESTIONS_WITH_REVERSE = addReverseQuestions(ALL_QUESTIONS);
 
 // 역문항 쌍 export (검증용)
 export { REVERSE_PAIRS };
@@ -235,6 +235,9 @@ export const QUESTION_STATS = {
 // 🆕 v5.0: 확장된 통계
 export const QUESTION_STATS_EXTENDED = {
   ...QUESTION_STATS,
+  
+  // 🔧 FIX: Full 버전은 역문항 포함 총 347문항
+  total: ALL_QUESTIONS_WITH_REVERSE.length,
   
   // 역문항 통계
   reverseQuestionCount: REVERSE_QUESTIONS.length,

@@ -63,25 +63,34 @@
   ignitionRanking: [{ name, nameKo, score, percentile }],
   
   // ========================================
-  // 방향성 4축
+  // 방향성 - 동기별 접근/회피
   // ========================================
-  directionScores: {
-    expansion: number, preservation: number,
-    approach: number, avoidance: number,
-    certainty: number, exploration: number,
-    active: number, passive: number
-  },
-  directionSummary: { primaryAxis: string, description: string },
+  directionScores: [
+    {
+      motive: string,          // 동기 영문명
+      motiveKo: string,        // 동기 한글명
+      approach: number,        // 접근 비율 (%)
+      avoidance: number,       // 회피 비율 (%)
+      dominant: string,        // 'approach' | 'avoidance'
+      balance: number          // 접근-회피 차이
+    }
+  ],
+  directionSummary: { overallPattern: string, description: string },
   
   // ========================================
-  // 운영방식 4축
+  // 운영방식 5축
   // ========================================
-  operatingScores: {
-    solo: number, collaborative: number,
-    depth: number, breadth: number,
-    structured: number, flexible: number,
-    sprint: number, marathon: number
-  },
+  operatingScores: [
+    {
+      axis: string,            // 'rhythm' | 'recovery' | 'relay' | 'resistance' | 'scope'
+      axisName: string,        // '업무 리듬' 등
+      pole1: string,           // 좌측 극 (예: '계획형')
+      pole2: string,           // 우측 극 (예: '즉흥형')
+      pole1Score: number,      // 좌측 점수
+      pole2Score: number,      // 우측 점수
+      ratio: number            // pole1 비율 (0-100)
+    }
+  ],
   operatingSummary: { primaryStyle: string, description: string },
   
   // ========================================
@@ -362,20 +371,30 @@
 **활용 팁**: [구체적인 조언]
 ```
 
-### 섹션 7: DIRECTION (방향)
+### 섹션 7: DIRECTION (방향성 - 동기별 접근/회피)
 
-4개 방향축을 해석합니다.
+각 동기를 추구할 때의 접근/회피 경향을 해석합니다. 특히 주목할 패턴(강한 접근, 강한 회피, 접근-회피 불일치)에 집중합니다.
 
 ```
-### [축 이름]
+### 동기별 접근/회피 패턴
 
-[방향1] [점수]점 | [방향2] [점수]점
-[우세 방향] 우세 (차이 [점수]점)
+**[동기명]**: 접근 [%] vs 회피 [%] → [우세 방향]
+[이 패턴의 의미 해석]
 
-[의미 해석]
+### 전체 패턴 분석
 
-**의사결정 스타일**: [영향]
-**리스크**: [주의점]
+[접근 우세 동기들]: [목록]
+[회피 우세 동기들]: [목록]
+[균형 동기들]: [목록]
+
+### 심리적 의미
+
+[접근 동기와 회피 동기의 조합이 의미하는 것]
+[신화 인물과의 연결점]
+
+### 주의점
+
+[회피 우세 동기가 있다면 그 영향]
 ```
 
 ### 섹션 8: SHADOW (숨겨진 동기)

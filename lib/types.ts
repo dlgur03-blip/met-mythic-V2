@@ -50,7 +50,11 @@ export type OperationAxis =
   | 'rhythm'
   | 'recharge'
   | 'release'
-  | 'recovery';
+  | 'recovery'
+  // 🔧 FIX: 실제 문항에서 사용하는 axis 추가
+  | 'relay'
+  | 'resistance'
+  | 'scope';
 
 /** 상황 */
 export type ContextType = 'normal' | 'pressure' | 'burnout' | 'growth' | 'crisis';
@@ -79,6 +83,8 @@ export interface Question {
   text: string;               // 문항 텍스트
   subtext?: string;           // 보조 텍스트 (시나리오 문항용)
   options: QuestionOption[];
+  // 🔧 FIX: 역문항 관련 속성 추가
+  reverseOf?: string;         // 역문항인 경우 원본 문항 ID
   metadata: {
     layer: number;            // 1-10 레이어
     isLite: boolean;          // Lite 버전 포함 여부
@@ -87,6 +93,8 @@ export interface Question {
     checkAgainst?: string;    // 검증용 비교 대상
     socialDesirability?: boolean; // 사회적 바람직성 문항
     selfReport?: boolean;     // 자기보고 문항
+    isReverse?: boolean;      // 🔧 FIX: 역문항 여부
+    reverseOf?: string;       // 🔧 FIX: 원본 문항 ID (metadata 내)
   };
 }
 

@@ -141,8 +141,8 @@ export function generateDummyAnswers(testType: ReturnType<typeof parseTestType>)
       optionId: selectedOption.id,
       responseTimeMs: Math.round(responseTimeMs),
       value: selectedOption.value ?? 0,
-      timestamp: Date.now(),
-    } as any);
+      timestamp: new Date(),  // 🔧 FIX: Date 객체로 수정 (Answer 인터페이스에 맞춤)
+    });
   }
   
   return answers;

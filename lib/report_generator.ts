@@ -66,6 +66,16 @@ export interface UserProfile {
     dominant: 'approach' | 'avoidance';
     balance?: number;
   }>;
+  // 🔧 FIX: operation 추가
+  operation?: Array<{
+    axis: string;
+    axisName?: string;
+    pole1: string;
+    pole2: string;
+    pole1Score: number;
+    pole2Score: number;
+    ratio: number;
+  }>;
   shadow?: {
     surface: string;
     surfaceScore: number;
@@ -395,11 +405,37 @@ export function convertToUserProfile(result: FullResult): UserProfile {
   }
   
   // 🆕 v5 데이터 변환
+  // 🔧 FIX: operation 축 이름 한국어 매핑
+  const axisNameMap: Record<string, string> = {
+    rhythm: '업무 리듬',
+    recovery: '에너지 회복',
+    recharge: '에너지 회복',
+    relay: '에너지 방출',
+    release: '에너지 방출',
+    resistance: '스트레스 반응',
+    scope: '작업 범위',
+    internal_external: '동기 원천',
+    immediate_delayed: '반응 속도',
+    active_passive: '행동 성향',
+    independent_dependent: '협업 스타일',
+  };
+  
   const profile: UserProfile = {
     motivation,
     ignition,
     direction,
     shadow,
+    
+    // 🔧 FIX: operation 추가
+    operation: result.operationScores?.map(op => ({
+      axis: op.axis,
+      axisName: axisNameMap[op.axis] || op.axis,
+      pole1: op.pole1,
+      pole2: op.pole2,
+      pole1Score: op.pole1Score,
+      pole2Score: op.pole2Score,
+      ratio: op.ratio,
+    })),
     
     // 에너지
     energy: result.energy ? {

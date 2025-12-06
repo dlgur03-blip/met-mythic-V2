@@ -27,6 +27,7 @@ import type {
   FigureMatch,
   UserMotivation,
   MotiveSource,
+  Archetype,  // 🔧 FIX: Archetype 타입 추가
 } from './types';
 
 // ============================================
@@ -94,7 +95,7 @@ function matchArchetypeLite(motivation: UserMotivation): ArchetypeMatch[] {
     }
     
     results.push({
-      archetype: archetype as any,
+      archetype: archetype as Archetype,
       archetypeName: ARCHETYPE_NAMES[archetype].ko,
       archetypeNameEn: ARCHETYPE_NAMES[archetype].en,
       score: Math.round(score * 10) / 10,
@@ -129,6 +130,9 @@ function matchFigureLite(archetype: string): FigureMatch {
 export interface LiteResult {
   version: 'lite';
   questionCount: number;
+  
+  // 🔧 FIX: nickname 속성 추가
+  nickname?: string;
   
   // 핵심 점수
   motiveScores: MotiveScore[];
@@ -205,7 +209,7 @@ export function calculateLiteScores(answers: Answer[]): LiteResult {
     maturityScore: maturityResult.overall,
     
     isValid: validationResult.isValid,
-    validationFlags: (validationResult as any).flags || [],
+    validationFlags: validationResult.warnings || [],  // 🔧 FIX: flags → warnings
     
     completedAt: new Date(),
     totalTimeMs,

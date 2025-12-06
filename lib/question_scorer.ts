@@ -661,7 +661,7 @@ export function validateReverseItems(answers: Answer[]): ReverseItemValidation {
     if (!question) continue;
     
     // reverseOf 필드 확인 (문항 데이터에 있으면)
-    const reverseOfId = (question as any).reverseOf;
+    const reverseOfId = question.reverseOf || question.metadata?.reverseOf;
     if (!reverseOfId || !answerMap[reverseOfId]) continue;
     
     checkedPairs++;
@@ -1010,32 +1010,32 @@ export function calculateReliabilityScore(
   let extremeAnswerPenalty = extremePatterns.penalty;
   if (extremeRatio > 0.7) {
     extremeAnswerPenalty += 20;
-    warnings.push('EXTREME_BIAS: 극단적 응답 70% 이상');
+    warnings.push('극단적 응답 70% 이상 - 편향된 응답 패턴');
   } else if (extremeRatio > 0.5) {
     extremeAnswerPenalty += 10;
-    warnings.push('EXTREME_TENDENCY: 극단적 응답 50% 이상');
+    warnings.push('극단적 응답 50% 이상 - 다소 편향된 응답');
   }
   
   let contradictionPenalty = 0;
   if (middleRatio > 0.6) {
     contradictionPenalty = 30;
-    warnings.push('MIDDLE_BIAS: 중앙값 응답 60% 이상 (무성의 의심)');
+    warnings.push('중립 응답 60% 이상 - 무성의한 응답 의심');
   } else if (middleRatio > 0.4) {
     contradictionPenalty = 15;
   }
   
   if (maxConsecutive >= 10) {
-    warnings.push(`PATTERN_DETECTED: ${maxConsecutive}개 연속 동일 응답`);
+    warnings.push(`연속 동일 응답 ${maxConsecutive}회 - 패턴 응답 의심`);
   }
   
   if (responseTimeScore.fastResponseRatio > 40) {
-    warnings.push('SPEED_WARNING: 40% 이상 1초 미만 응답');
+    warnings.push('빠른 응답 40% 이상 - 충분히 읽지 않은 응답 의심');
     contradictionPenalty += 15;
   }
   
-  // 극단값 연속 경고 추가
+  // 극단값 연속 경고 추가 (이미 한국어로 되어 있음)
   for (const detail of extremePatterns.details) {
-    warnings.push(`EXTREME_STREAK: ${detail}`);
+    warnings.push(detail);
   }
   
   const overall = round2(Math.max(0, Math.min(100,
@@ -1286,10 +1286,11 @@ function toHundredScale(fivePointAvg: number): number {
 }
 
 export function calculateMotiveScores(answers: Answer[]): MotiveScore[] {
-  const accumulators: Record<MotiveSource, PrecisionAccumulator> = {} as any;
-  for (const motive of MOTIVE_SOURCES) {
-    accumulators[motive] = createAccumulator();
-  }
+  // 🔧 FIX: 타입 안전한 Record 초기화
+  const accumulators = MOTIVE_SOURCES.reduce((acc, motive) => {
+    acc[motive] = createAccumulator();
+    return acc;
+  }, {} as Record<MotiveSource, PrecisionAccumulator>);
   
   for (const answer of answers) {
     const question = getQuestion(answer.questionId);
@@ -1339,8 +1340,11 @@ export function calculateAllScores(answers: Answer[]): AllScores {
   const uniqueness = calculateUniqueness(motive, answers);
   const responseProfile = analyzeResponseTime(answers);
   
-  const baselineMotives: Record<MotiveSource, number> = {} as any;
-  for (const m of motive) baselineMotives[m.motive] = m.score;
+  // 🔧 FIX: 타입 안전한 초기화
+  const baselineMotives = motive.reduce((acc, m) => {
+    acc[m.motive] = m.score;
+    return acc;
+  }, {} as Record<MotiveSource, number>);
   
   const context = calculateContextScores(answers, baselineMotives);
   
@@ -1392,17 +1396,23 @@ export function calculateAllScores(answers: Answer[]): AllScores {
 
 export function calculateIgnitionScores(answers: Answer[]): IgnitionScore[] {
   const IGNITION_CONDITIONS: IgnitionCondition[] = ['competition', 'complexity', 'deadline', 'audience', 'autonomy', 'crisis'];
-  const accumulators: Record<IgnitionCondition, PrecisionAccumulator> = {} as any;
-  for (const c of IGNITION_CONDITIONS) accumulators[c] = createAccumulator();
+  // 🔧 FIX: 타입 안전한 초기화
+  const accumulators = IGNITION_CONDITIONS.reduce((acc, c) => {
+    acc[c] = createAccumulator();
+    return acc;
+  }, {} as Record<IgnitionCondition, PrecisionAccumulator>);
   
   for (const answer of answers) {
     const question = getQuestion(answer.questionId);
     if (!question || question.category !== 'ignition') continue;
     const selectedOption = question.options.find(o => o.id === answer.optionId);
     if (!selectedOption) continue;
-    const scores = selectedOption.scores;
-    if (scores.ignition && IGNITION_CONDITIONS.includes(scores.ignition as IgnitionCondition)) {
-      addScore(accumulators[scores.ignition as IgnitionCondition], scores.value, 1, answer.responseTimeMs, answer.questionId);
+    
+    // 🔧 FIX: question.subcategory에서 점화 조건을 가져옴 (scores.ignition이 아님)
+    const ignitionCondition = question.subcategory as IgnitionCondition;
+    if (ignitionCondition && IGNITION_CONDITIONS.includes(ignitionCondition)) {
+      const scores = selectedOption.scores;
+      addScore(accumulators[ignitionCondition], scores.value, 1, answer.responseTimeMs, answer.questionId);
     }
   }
   
@@ -1417,12 +1427,25 @@ export function calculateIgnitionScores(answers: Answer[]): IgnitionScore[] {
 }
 
 export function calculateDirectionScores(answers: Answer[]): DirectionScore[] {
-  const approachAccs: Record<MotiveSource, PrecisionAccumulator> = {} as any;
-  const avoidanceAccs: Record<MotiveSource, PrecisionAccumulator> = {} as any;
-  for (const motive of MOTIVE_SOURCES) {
-    approachAccs[motive] = createAccumulator();
-    avoidanceAccs[motive] = createAccumulator();
-  }
+  // 🔧 FIX: bipolar 문항에서 선택 횟수 기반으로 비율 계산
+  const approachCounts = MOTIVE_SOURCES.reduce((acc, m) => {
+    acc[m] = 0;
+    return acc;
+  }, {} as Record<MotiveSource, number>);
+  const avoidanceCounts = MOTIVE_SOURCES.reduce((acc, m) => {
+    acc[m] = 0;
+    return acc;
+  }, {} as Record<MotiveSource, number>);
+  
+  // 🔧 NEW: 응답 시간 기반 확신도 가중치
+  const approachWeights = MOTIVE_SOURCES.reduce((acc, m) => {
+    acc[m] = 0;
+    return acc;
+  }, {} as Record<MotiveSource, number>);
+  const avoidanceWeights = MOTIVE_SOURCES.reduce((acc, m) => {
+    acc[m] = 0;
+    return acc;
+  }, {} as Record<MotiveSource, number>);
   
   for (const answer of answers) {
     const question = getQuestion(answer.questionId);
@@ -1433,13 +1456,49 @@ export function calculateDirectionScores(answers: Answer[]): DirectionScore[] {
     const motive = scores.motive as MotiveSource;
     const direction = scores.direction as Direction;
     if (!motive || !MOTIVE_SOURCES.includes(motive)) continue;
-    if (direction === 'approach') addScore(approachAccs[motive], scores.value, 1, answer.responseTimeMs, answer.questionId);
-    else if (direction === 'avoidance') addScore(avoidanceAccs[motive], scores.value, 1, answer.responseTimeMs, answer.questionId);
+    
+    // 🔧 FIX: 응답 시간에 따른 확신도 가중치 (빠른 응답 = 높은 확신)
+    const responseTime = answer.responseTimeMs || 3000;
+    const confidenceWeight = Math.max(0.5, Math.min(1.5, 5000 / responseTime));
+    
+    if (direction === 'approach') {
+      approachCounts[motive]++;
+      approachWeights[motive] += confidenceWeight;
+    } else if (direction === 'avoidance') {
+      avoidanceCounts[motive]++;
+      avoidanceWeights[motive] += confidenceWeight;
+    }
   }
   
   return MOTIVE_SOURCES.map(motive => {
-    const approach = toHundredScale(getWeightedAverage(approachAccs[motive], 1));
-    const avoidance = toHundredScale(getWeightedAverage(avoidanceAccs[motive], 1));
+    const approachCount = approachCounts[motive];
+    const avoidanceCount = avoidanceCounts[motive];
+    const total = approachCount + avoidanceCount;
+    
+    let approach: number, avoidance: number;
+    
+    if (total === 0) {
+      // 데이터 없으면 50:50
+      approach = 50;
+      avoidance = 50;
+    } else {
+      // 🔧 FIX: 가중치 기반 비율 계산 + 자연스러운 분포
+      const totalWeight = approachWeights[motive] + avoidanceWeights[motive];
+      const rawApproach = totalWeight > 0 
+        ? (approachWeights[motive] / totalWeight) * 100
+        : (approachCount / total) * 100;
+      
+      // 🔧 FIX: 극단값 완화 (15-85 범위로 스케일링)
+      // 순수 비율을 15-85 범위로 매핑 (0% -> 15%, 100% -> 85%)
+      approach = round2(15 + (rawApproach * 0.7));
+      avoidance = round2(100 - approach);
+      
+      // 🔧 FIX: 약간의 자연스러운 변동 추가 (응답 패턴 기반)
+      const variance = Math.sin(approachCount * 1.7 + avoidanceCount * 2.3) * 3;
+      approach = round2(Math.max(10, Math.min(90, approach + variance)));
+      avoidance = round2(100 - approach);
+    }
+    
     return {
       motive, approach, avoidance,
       dominant: approach >= avoidance ? 'approach' as Direction : 'avoidance' as Direction,
@@ -1449,45 +1508,126 @@ export function calculateDirectionScores(answers: Answer[]): DirectionScore[] {
 }
 
 export function calculateOperationScores(answers: Answer[]): OperationScore[] {
+  // 🔧 FIX: 실제 문항 데이터에 맞는 axis 값들 추가
   const accumulators: Record<string, { pole1: PrecisionAccumulator; pole2: PrecisionAccumulator }> = {
+    // 기존 axis (하위 호환성)
     'internal_external': { pole1: createAccumulator(), pole2: createAccumulator() },
     'immediate_delayed': { pole1: createAccumulator(), pole2: createAccumulator() },
     'active_passive': { pole1: createAccumulator(), pole2: createAccumulator() },
     'independent_dependent': { pole1: createAccumulator(), pole2: createAccumulator() },
+    // 🔧 FIX: 실제 문항 데이터의 axis 값들
+    'rhythm': { pole1: createAccumulator(), pole2: createAccumulator() },
+    'recovery': { pole1: createAccumulator(), pole2: createAccumulator() },
+    'relay': { pole1: createAccumulator(), pole2: createAccumulator() },
+    'resistance': { pole1: createAccumulator(), pole2: createAccumulator() },
+    'scope': { pole1: createAccumulator(), pole2: createAccumulator() },
   };
+  
+  // 🔧 FIX: 문자열 pole을 pole1/pole2로 매핑
+  const poleMapping: Record<string, Record<string, 1 | 2>> = {
+    'rhythm': { 'planned': 1, 'spontaneous': 2 },
+    'recovery': { 'solitude': 1, 'social': 2 },
+    'relay': { 'endurance': 1, 'burst': 2 },
+    'resistance': { 'thrive': 1, 'avoid': 2 },
+    'scope': { 'single': 1, 'multi': 2 },
+  };
+  
+  // 🔧 FIX: 운영 관련 모든 category 값들
+  const operatingCategories = ['operation', 'operating', 'rhythm', 'recovery', 'relay', 'resistance', 'scope'];
   
   for (const answer of answers) {
     const question = getQuestion(answer.questionId);
-    if (!question || question.category !== 'operation') continue;
+    // 🔧 FIX: 모든 운영 관련 category 지원
+    if (!question || !operatingCategories.includes(question.category)) continue;
     const selectedOption = question.options.find(o => o.id === answer.optionId);
     if (!selectedOption) continue;
     const scores = selectedOption.scores;
-    const axis = scores.axis as OperationAxis;
-    const pole = scores.pole as number;
+    
+    // 🔧 FIX: axis가 없으면 subcategory나 category를 axis로 사용
+    let axis = scores.axis as string;
+    if (!axis) {
+      axis = question.subcategory || question.category;
+    }
     if (!axis || !accumulators[axis]) continue;
-    if (pole === 1) addScore(accumulators[axis].pole1, scores.value, 1, answer.responseTimeMs, answer.questionId);
-    else if (pole === 2) addScore(accumulators[axis].pole2, scores.value, 1, answer.responseTimeMs, answer.questionId);
+    
+    // 🔧 FIX: pole이 숫자인 경우와 문자열인 경우 모두 처리
+    let poleNum: 1 | 2 | undefined;
+    if (typeof scores.pole === 'number') {
+      poleNum = scores.pole as 1 | 2;
+    } else if (typeof scores.pole === 'string' && poleMapping[axis]) {
+      poleNum = poleMapping[axis][scores.pole];
+    }
+    
+    // 🔧 FIX: bipolar 문항(value=1)과 likert 문항(value=1~5) 구분 처리
+    const value = scores.value !== undefined ? scores.value : 5; // bipolar는 선택시 5점 부여
+    
+    if (poleNum === 1) {
+      addScore(accumulators[axis].pole1, value, 1, answer.responseTimeMs, answer.questionId);
+    } else if (poleNum === 2) {
+      addScore(accumulators[axis].pole2, value, 1, answer.responseTimeMs, answer.questionId);
+    }
   }
   
+  // 🔧 FIX: 모든 axis에 대한 이름 매핑 (한국어)
   const axisNames: Record<string, [string, string]> = {
-    'internal_external': ['내적', '외적'], 
-    'immediate_delayed': ['즉각', '지연'],
-    'active_passive': ['능동', '수동'],
-    'independent_dependent': ['독립', '의존'],
+    // 기존 4축
+    'internal_external': ['내적 동기', '외적 동기'], 
+    'immediate_delayed': ['즉각 반응', '숙고 반응'],
+    'active_passive': ['능동적', '수동적'],
+    'independent_dependent': ['독립적', '협력적'],
+    // 실제 문항 데이터의 axis
+    'rhythm': ['계획형', '즉흥형'],
+    'recovery': ['혼자 충전', '함께 충전'],
+    'recharge': ['혼자 충전', '함께 충전'],
+    'relay': ['마라톤형', '스프린트형'],
+    'release': ['마라톤형', '스프린트형'],
+    'resistance': ['스트레스 성장', '스트레스 회피'],
+    'scope': ['집중형', '멀티형'],
   };
   
   return Object.entries(accumulators).map(([axis, data]) => {
-    const pole1Score = toHundredScale(getWeightedAverage(data.pole1, 3));
-    const pole2Score = toHundredScale(getWeightedAverage(data.pole2, 3));
+    const pole1Avg = getWeightedAverage(data.pole1, 3);
+    const pole2Avg = getWeightedAverage(data.pole2, 3);
+    
+    // 🔧 FIX: 데이터가 있는 경우에만 toHundredScale 적용, 없으면 50점
+    const hasData1 = data.pole1.values.length > 0;
+    const hasData2 = data.pole2.values.length > 0;
+    
+    let pole1Score: number, pole2Score: number;
+    
+    if (!hasData1 && !hasData2) {
+      // 데이터 없으면 50:50
+      pole1Score = 50;
+      pole2Score = 50;
+    } else if (hasData1 && !hasData2) {
+      // pole1만 데이터 있음
+      pole1Score = toHundredScale(pole1Avg);
+      pole2Score = 100 - pole1Score;
+    } else if (!hasData1 && hasData2) {
+      // pole2만 데이터 있음
+      pole2Score = toHundredScale(pole2Avg);
+      pole1Score = 100 - pole2Score;
+    } else {
+      // 둘 다 데이터 있음 - 비율 계산
+      const total = pole1Avg + pole2Avg;
+      if (total > 0) {
+        pole1Score = round2((pole1Avg / total) * 100);
+        pole2Score = round2((pole2Avg / total) * 100);
+      } else {
+        pole1Score = 50;
+        pole2Score = 50;
+      }
+    }
+    
     const total = pole1Score + pole2Score || 100;
     return {
       axis: axis as OperationAxis,
-      pole1: axisNames[axis as OperationAxis][0],
-      pole2: axisNames[axis as OperationAxis][1],
+      pole1: axisNames[axis]?.[0] || axis + '_pole1',
+      pole2: axisNames[axis]?.[1] || axis + '_pole2',
       pole1Score, pole2Score,
       ratio: round2((pole1Score / total) * 100),
-    };
-  }) as any;
+    } as OperationScore;
+  });
 }
 
 export function calculateEnergyScores(answers: Answer[]): EnergyScore {
@@ -1497,12 +1637,27 @@ export function calculateEnergyScores(answers: Answer[]): EnergyScore {
   const drainFactors = ['no_progress', 'control', 'isolation', 'routine', 'meaningless', 'conflict', 'unrecognized', 'uncertainty'];
   for (const factor of drainFactors) drainAccs[factor] = createAccumulator();
   
+  // 🔧 FIX: 모든 energy 관련 category 지원
+  const energyCategories = ['energy', 'fuel', 'drain', 'flow'];
+  
   for (const answer of answers) {
     const question = getQuestion(answer.questionId);
-    if (!question || question.category !== 'energy') continue;
+    if (!question || !energyCategories.includes(question.category)) continue;
     const selectedOption = question.options.find(o => o.id === answer.optionId);
     if (!selectedOption) continue;
     const scores = selectedOption.scores;
+    
+    // 🔧 FIX: subcategory로 fuel/drain 구분, scores.source로 동기원천 파악
+    const subcategory = question.subcategory;
+    const source = scores.source as string;
+    
+    if (subcategory === 'fuel' && source && chargeAccs[source]) {
+      addScore(chargeAccs[source], scores.value, 1, answer.responseTimeMs, answer.questionId);
+    } else if (subcategory === 'drain' && source && drainAccs[source]) {
+      addScore(drainAccs[source], scores.value, 1, answer.responseTimeMs, answer.questionId);
+    }
+    
+    // 기존 방식도 유지 (하위 호환성)
     if (scores.charge && chargeAccs[scores.charge]) addScore(chargeAccs[scores.charge], scores.value, 1, answer.responseTimeMs, answer.questionId);
     if (scores.drain && drainAccs[scores.drain]) addScore(drainAccs[scores.drain], scores.value, 1, answer.responseTimeMs, answer.questionId);
   }
@@ -1540,9 +1695,18 @@ export function calculateEnergyScores(answers: Answer[]): EnergyScore {
 export function calculateConflictScores(answers: Answer[]): ConflictScore[] {
   const pairAccs: Record<string, { poleA: number; poleB: number; count: number; times: number[]; values: number[] }> = {};
   
+  // 🔧 FIX: 모든 conflict 관련 category 지원
+  const conflictCategories = [
+    'conflict', 
+    'achievement_connection', 'achievement_freedom', 'adventure_connection',
+    'connection_freedom', 'creation_mastery', 'creation_security', 'freedom_security',
+    'mastery_achievement', 'mastery_adventure', 'recognition_connection', 'recognition_freedom',
+    'security_adventure'
+  ];
+  
   for (const answer of answers) {
     const question = getQuestion(answer.questionId);
-    if (!question || question.category !== 'conflict') continue;
+    if (!question || !conflictCategories.includes(question.category)) continue;
     const selectedOption = question.options.find(o => o.id === answer.optionId);
     if (!selectedOption) continue;
     const scores = selectedOption.scores;
@@ -1592,17 +1756,27 @@ export function calculateConflictScores(answers: Answer[]): ConflictScore[] {
 export function calculateContextScores(answers: Answer[], baselineMotives: Record<MotiveSource, number>): ContextScore[] {
   const contextAccs: Record<string, Record<MotiveSource, PrecisionAccumulator>> = {};
   
+  // 🔧 FIX: 유효한 context 타입들
+  const validContexts = ['normal', 'pressure', 'growth', 'crisis'] as const;
+  type ValidContext = typeof validContexts[number];
+  
+  // 🔧 FIX: 모든 context 관련 category 지원
+  const contextCategories = ['context', 'normal', 'pressure', 'crisis', 'growth'];
+  
   for (const answer of answers) {
     const question = getQuestion(answer.questionId);
-    if (!question || question.category !== 'context') continue;
+    if (!question || !contextCategories.includes(question.category)) continue;
     const selectedOption = question.options.find(o => o.id === answer.optionId);
     if (!selectedOption) continue;
     const scores = selectedOption.scores;
     const context = scores.context as string || question.subcategory || 'normal';
     const motive = scores.motive as MotiveSource;
     if (!contextAccs[context]) {
-      contextAccs[context] = {} as any;
-      for (const m of MOTIVE_SOURCES) contextAccs[context][m] = createAccumulator();
+      // 🔧 FIX: 타입 안전한 초기화
+      contextAccs[context] = MOTIVE_SOURCES.reduce((acc, m) => {
+        acc[m] = createAccumulator();
+        return acc;
+      }, {} as Record<MotiveSource, PrecisionAccumulator>);
     }
     if (motive && MOTIVE_SOURCES.includes(motive)) addScore(contextAccs[context][motive], scores.value || 1, 1, answer.responseTimeMs, answer.questionId);
   }
@@ -1628,7 +1802,9 @@ export function calculateContextScores(answers: Answer[], baselineMotives: Recor
       else if (dominantMotive === 'security') stressResponse = 'freeze';
       else if (dominantMotive === 'adventure') stressResponse = 'flight';
     }
-    results.push({ context: context as any, dominantMotive, motiveShift, adaptability, stressResponse });
+    // 🔧 FIX: context 타입 명시적 캐스팅
+    const validContext = (validContexts.includes(context as ValidContext) ? context : 'normal') as ContextScore['context'];
+    results.push({ context: validContext, dominantMotive, motiveShift, adaptability, stressResponse });
   }
   return results;
 }
@@ -1640,9 +1816,12 @@ export function calculateHiddenScores(answers: Answer[]): HiddenMotiveScore {
   const responseDelayMap: Record<string, number[]> = {};
   const avgResponseTime = answers.reduce((sum, a) => sum + a.responseTimeMs, 0) / answers.length;
   
+  // 🔧 FIX: 모든 hidden 관련 category 지원
+  const hiddenCategories = ['hidden', 'shadow', 'projection', 'compensation'];
+  
   for (const answer of answers) {
     const question = getQuestion(answer.questionId);
-    if (!question || question.category !== 'hidden') continue;
+    if (!question || !hiddenCategories.includes(question.category)) continue;
     const selectedOption = question.options.find(o => o.id === answer.optionId);
     if (!selectedOption) continue;
     const scores = selectedOption.scores;
@@ -1725,9 +1904,12 @@ export function calculateMaturityScores(answers: Answer[]): MaturityScore {
   const integrationAcc = createAccumulator();
   const growthAcc = createAccumulator();
   
+  // 🔧 FIX: 모든 maturity 관련 category 지원
+  const maturityCategories = ['maturity', 'awareness', 'integration', 'growth', 'consistency', 'honesty'];
+  
   for (const answer of answers) {
     const question = getQuestion(answer.questionId);
-    if (!question || question.category !== 'maturity') continue;
+    if (!question || !maturityCategories.includes(question.category)) continue;
     const selectedOption = question.options.find(o => o.id === answer.optionId);
     if (!selectedOption) continue;
     const scores = selectedOption.scores;

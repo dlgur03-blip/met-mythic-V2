@@ -28,11 +28,20 @@ export function FullResultScreen({ result, onRetry, onGenerateReport }: FullResu
     approach: '접근', avoidance: '회피',
   };
 
-  const operationLabels: Record<string, { left: string; right: string }> = {
-    rhythm: { left: '계획형', right: '즉흥형' },
-    recharge: { left: '고독 충전', right: '사회적 충전' },
-    release: { left: '지구력형', right: '폭발형' },
-    recovery: { left: '빠른 회복', right: '느린 회복' },
+  const operationLabels: Record<string, { left: string; right: string; description?: string }> = {
+    // 기존 4축 (하위 호환성) - 의미 있는 한국어로
+    internal_external: { left: '내적 동기', right: '외적 동기', description: '동기의 원천' },
+    immediate_delayed: { left: '즉각 반응', right: '숙고 반응', description: '반응 속도' },
+    active_passive: { left: '능동적', right: '수동적', description: '행동 성향' },
+    independent_dependent: { left: '독립적', right: '협력적', description: '협업 스타일' },
+    // 실제 문항에서 사용하는 축
+    rhythm: { left: '계획형', right: '즉흥형', description: '업무 리듬' },
+    recovery: { left: '혼자 충전', right: '함께 충전', description: '에너지 회복' },
+    recharge: { left: '혼자 충전', right: '함께 충전', description: '에너지 회복' },
+    relay: { left: '마라톤형', right: '스프린트형', description: '에너지 방출' },
+    release: { left: '마라톤형', right: '스프린트형', description: '에너지 방출' },
+    resistance: { left: '스트레스 성장', right: '스트레스 회피', description: '스트레스 반응' },
+    scope: { left: '집중형', right: '멀티형', description: '작업 범위' },
   };
 
   const levelDescriptions: Record<number, { name: string; desc: string }> = {
@@ -52,14 +61,15 @@ export function FullResultScreen({ result, onRetry, onGenerateReport }: FullResu
     { key: 'insights', label: '인사이트', emoji: '📊' },
   ];
 
-  // 🔧 에너지 데이터 안전하게 추출
-  const energyData = result.energy || {};
-  const energyFuel = (energyData as any).fuel || {};
-  const energyDrain = (energyData as any).drain || {};
-  const energyFlowPatterns = (energyData as any).flowPatterns || {};
+  // 🔧 FIX: 에너지 데이터 타입 안전하게 추출
+  const energyData = result.energy;
+  const energyFuel = energyData?.charge || {};
+  const energyDrain = energyData?.drain || {};
+  // flowPatterns는 EnergyScore에 없으므로 빈 객체 사용
+  const energyFlowPatterns: Record<string, number> = {};
 
-  // 🔧 에너지 스코어 배열이 있는 경우 처리
-  const energyScores = (result as any).energyScores || [];
+  // 🔧 FIX: energyScores 배열은 FullResult에 없으므로 빈 배열 사용
+  const energyScores: Array<{ name: string; score: number }> = [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -278,11 +288,19 @@ export function FullResultScreen({ result, onRetry, onGenerateReport }: FullResu
               <div className="space-y-4">
                 {result.operationScores.map((op) => {
                   const labels = operationLabels[op.axis];
+                  // 🔧 FIX: labels가 없으면 pole1/pole2 사용 (이미 한국어)
+                  const leftLabel = labels?.left || op.pole1 || '좌';
+                  const rightLabel = labels?.right || op.pole2 || '우';
+                  const description = labels?.description || '';
+                  
                   return (
                     <div key={op.axis}>
+                      {description && (
+                        <div className="text-xs text-purple-300 mb-1">{description}</div>
+                      )}
                       <div className="flex justify-between text-xs text-purple-200 mb-2">
-                        <span>{labels?.left || op.axis}</span>
-                        <span>{labels?.right || ''}</span>
+                        <span>{leftLabel}</span>
+                        <span>{rightLabel}</span>
                       </div>
                       <div className="relative h-4 bg-white/10 rounded-full">
                         <div 
@@ -375,7 +393,7 @@ export function FullResultScreen({ result, onRetry, onGenerateReport }: FullResu
               <div className="bg-white/10 backdrop-blur rounded-2xl p-6">
                 <h3 className="text-lg font-semibold text-white mb-4">🔋 에너지 패턴</h3>
                 <div className="space-y-4">
-                  {energyScores.map((item: any) => {
+                  {energyScores.map((item) => {
                     const energySourceNames: Record<string, string> = {
                       challenge: '도전', complexity: '복잡성', autonomy: '자율성',
                       mastery: '전문성', connection: '관계', recognition: '인정',
@@ -383,9 +401,9 @@ export function FullResultScreen({ result, onRetry, onGenerateReport }: FullResu
                       adventure: '모험', security: '안정', growth: '성장',
                       learning: '학습', impact: '영향력', meaning: '의미',
                     };
-                    const label = energySourceNames[item.source] || energySourceNames[item.type] || item.source || item.type;
+                    const label = energySourceNames[item.name] || item.name;
                     return (
-                    <div key={item.source || item.type}>
+                    <div key={item.name}>
                       <div className="flex justify-between mb-1">
                         <span className="text-purple-200">{label}</span>
                         <span className="text-white">{item.score}</span>
@@ -432,12 +450,18 @@ export function FullResultScreen({ result, onRetry, onGenerateReport }: FullResu
                 <div className="grid grid-cols-2 gap-3">
                   {Object.entries(energyDrain).map(([drain, score]) => {
                     const drainNames: Record<string, string> = {
+                      // 실제 점수 계산에서 사용하는 drain 요소들
+                      no_progress: '진전 없음',
+                      control: '과도한 통제',
+                      isolation: '고립감',
                       routine: '반복 업무',
-                      micromanage: '세부 관리',
+                      meaningless: '의미 없음',
                       conflict: '갈등 상황',
+                      unrecognized: '인정 부족',
                       uncertainty: '불확실성',
-                      isolation: '고립',
-                      pressure: '압박',
+                      // 기존 호환성 (혹시 사용되는 경우)
+                      micromanage: '세부 관리',
+                      pressure: '압박감',
                       boredom: '지루함',
                       criticism: '비판',
                       restriction: '제한',
@@ -871,9 +895,9 @@ export function FullResultScreen({ result, onRetry, onGenerateReport }: FullResu
                   <div className="text-white font-medium">{result.validation.honesty}점</div>
                 </div>
               </div>
-              {(result.validation as any).flags && (result.validation as any).flags.length > 0 && (
+              {result.validation.warnings && result.validation.warnings.length > 0 && (
                 <div className="mt-3 text-sm text-yellow-300">
-                  주의: {(result.validation as any).flags.join(', ')}
+                  주의: {result.validation.warnings.join(', ')}
                 </div>
               )}
             </div>

@@ -101,7 +101,8 @@ function calculateTalentGrade(result: FullResult): TalentGrade {
   return {
     overall: toGrade(overallScore),
     potential: toGrade((metacog + result.maturity.level * 20) / 2 + 10),
-    reliability: result.reliabilityScore?.grade as any || toGrade(reliability),
+    // 🔧 FIX: F 등급은 D로 매핑
+    reliability: (result.reliabilityScore?.grade === 'F' ? 'D' : result.reliabilityScore?.grade) || toGrade(reliability),
     uniqueness: toGrade(100 - (result.uniqueness?.percentile || 50)), // percentile이 낮을수록 고유
   };
 }

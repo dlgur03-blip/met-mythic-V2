@@ -19,11 +19,9 @@ export interface AccessKey {
   usedBy?: string;
 }
 
-// 관리자 비밀번호
-export const ADMIN_PASSWORD = '01046975590';
-
-// 마스터키 (항상 사용 가능)
-export const MASTER_KEY = '20031123';
+// ⚠️ 보안: 환경변수에서 로드 (절대 코드에 하드코딩 금지!)
+export const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '';
+export const MASTER_KEY = process.env.NEXT_PUBLIC_MASTER_KEY || '';
 
 // 랜덤 키 생성 (8자리)
 export function generateKey(): string {

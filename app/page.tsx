@@ -154,8 +154,8 @@ export default function HomePage() {
     
     if (testVersion === 'lite') {
       const result = calculateLiteScores(answers);
-      // nickname 추가
-      (result as any).nickname = nickname || undefined;
+      // 🔧 FIX: 타입 안전하게 nickname 추가
+      result.nickname = nickname || undefined;
       setLiteResult(result);
     } else {
       const result = calculateFullScores(answers);

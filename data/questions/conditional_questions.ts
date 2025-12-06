@@ -689,7 +689,8 @@ export interface QuestionWithMetadata {
 /**
  * 기존 문항 배열에 메타데이터 병합
  */
-export function mergeQuestionMetadata<T extends { id: string; category: string; subcategory: string }>(
+// 🔧 FIX: subcategory를 옵셔널로 변경
+export function mergeQuestionMetadata<T extends { id: string; category: string; subcategory?: string }>(
   questions: T[]
 ): (T & { socialDesirability: number; reverseOf?: string })[] {
   return questions.map(q => {
@@ -698,7 +699,7 @@ export function mergeQuestionMetadata<T extends { id: string; category: string; 
     
     return {
       ...q,
-      socialDesirability: getSocialDesirability(q.id, q.category, q.subcategory),
+      socialDesirability: getSocialDesirability(q.id, q.category, q.subcategory || ''),
       reverseOf: metadata?.reverseOf,
       sensitivityLevel: metadata?.sensitivityLevel,
       hasReverseQuestion: !!reverseQ,

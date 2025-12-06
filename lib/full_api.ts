@@ -539,7 +539,10 @@ const MOTIVE_LIST: MotiveSource[] = [
   'connection', 'security', 'freedom', 'adventure'
 ];
 
-function cosineSimilarity(user: Record<string, number>, figure: Record<string, number>): number {
+// 🔧 FIX: 타입 안전한 유사도 계산 (MotiveSource 키 사용)
+type MotiveRecord = Record<MotiveSource, number>;
+
+function cosineSimilarity(user: MotiveRecord, figure: MotiveRecord): number {
   let dot = 0, userMag = 0, figureMag = 0;
   for (const m of MOTIVE_LIST) {
     const u = (user[m] || 0) / 100;
@@ -552,7 +555,7 @@ function cosineSimilarity(user: Record<string, number>, figure: Record<string, n
   return mag > 0 ? dot / mag : 0;
 }
 
-function euclideanSimilarity(user: Record<string, number>, figure: Record<string, number>): number {
+function euclideanSimilarity(user: MotiveRecord, figure: MotiveRecord): number {
   let sumSq = 0;
   for (const m of MOTIVE_LIST) {
     const u = (user[m] || 0) / 100;
@@ -564,7 +567,7 @@ function euclideanSimilarity(user: Record<string, number>, figure: Record<string
   return Math.max(0, 1 - (dist / maxDist));
 }
 
-function rankCorrelation(user: Record<string, number>, figure: Record<string, number>): number {
+function rankCorrelation(user: MotiveRecord, figure: MotiveRecord): number {
   const userRanked = MOTIVE_LIST.map(m => ({ m, v: user[m] || 0 })).sort((a, b) => b.v - a.v).map((x, i) => ({ ...x, r: i + 1 }));
   const figureRanked = MOTIVE_LIST.map(m => ({ m, v: (figure[m] || 0) * 100 })).sort((a, b) => b.v - a.v).map((x, i) => ({ ...x, r: i + 1 }));
   let sumD2 = 0;
@@ -578,7 +581,7 @@ function rankCorrelation(user: Record<string, number>, figure: Record<string, nu
   return (rho + 1) / 2;
 }
 
-function shapeSimilarity(user: Record<string, number>, figure: Record<string, number>): number {
+function shapeSimilarity(user: MotiveRecord, figure: MotiveRecord): number {
   const userVals = MOTIVE_LIST.map(m => (user[m] || 0) / 100);
   const figureVals = MOTIVE_LIST.map(m => figure[m] || 0);
   const userMean = userVals.reduce((a, b) => a + b, 0) / userVals.length;
@@ -589,11 +592,11 @@ function shapeSimilarity(user: Record<string, number>, figure: Record<string, nu
   return Math.max(0, 1 - stdDiff * 3);
 }
 
-function calculateSimilarity(user: UserMotivation, figure: Record<string, number>): number {
-  const cosine = cosineSimilarity(user as any, figure);
-  const euclidean = euclideanSimilarity(user as any, figure);
-  const rank = rankCorrelation(user as any, figure);
-  const shape = shapeSimilarity(user as any, figure);
+function calculateSimilarity(user: UserMotivation, figure: MotiveRecord): number {
+  const cosine = cosineSimilarity(user, figure);
+  const euclidean = euclideanSimilarity(user, figure);
+  const rank = rankCorrelation(user, figure);
+  const shape = shapeSimilarity(user, figure);
   const combined = cosine * 0.35 + euclidean * 0.25 + rank * 0.25 + shape * 0.15;
   return round2(combined * 100);
 }

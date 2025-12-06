@@ -248,14 +248,19 @@ export const LEVEL_NAMES: Record<MaturityLevel, { ko: string; en: string }> = {
 
 /** 운영 축 라벨 */
 export const OPERATION_LABELS: Partial<Record<OperationAxis, { left: string; right: string }>> = {
+  // 실제 문항에서 사용하는 축
   rhythm:   { left: '계획형', right: '즉흥형' },
-  recharge: { left: '고독 충전', right: '사회적 충전' },
-  release:  { left: '지구력형', right: '폭발형' },
-  recovery: { left: '빠른 회복', right: '느린 회복' },
-  internal_external: { left: '내적', right: '외적' },
-  immediate_delayed: { left: '즉각', right: '지연' },
-  active_passive: { left: '능동', right: '수동' },
-  independent_dependent: { left: '독립', right: '의존' },
+  recharge: { left: '혼자 충전', right: '함께 충전' },
+  release:  { left: '마라톤형', right: '스프린트형' },
+  recovery: { left: '혼자 충전', right: '함께 충전' },
+  relay:    { left: '마라톤형', right: '스프린트형' },
+  resistance: { left: '스트레스 성장', right: '스트레스 회피' },
+  scope:    { left: '집중형', right: '멀티형' },
+  // 기존 4축 (하위 호환성)
+  internal_external: { left: '내적 동기', right: '외적 동기' },
+  immediate_delayed: { left: '즉각 반응', right: '숙고 반응' },
+  active_passive: { left: '능동적', right: '수동적' },
+  independent_dependent: { left: '독립적', right: '협력적' },
 };
 
 // ============================================
